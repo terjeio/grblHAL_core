@@ -304,6 +304,9 @@ FLASHMEM static void stack_unwind_sub (uint32_t o_label, bool success)
         stack_pull();
 
     if(stack_idx >= 0) {
+
+        on_endsub_ptr callback = stack[stack_idx].sub->callback;
+
         if(o_label > NGC_MAX_PARAM_ID) {
             uint32_t count = 0;
             if(stack[stack_idx].sub == get_refcount(&count) && count == 1)
@@ -312,8 +315,6 @@ FLASHMEM static void stack_unwind_sub (uint32_t o_label, bool success)
             stream_redirect_close(stack[stack_idx].file);
         } else
             stream_reposition(stack[stack_idx].file, stack[stack_idx].file_pos, stack[stack_idx].line_number);
-
-        on_endsub_ptr callback = stack[stack_idx].sub->callback;
 
         stack_pull();
 

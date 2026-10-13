@@ -752,7 +752,7 @@ FLASHMEM bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stre
         mpg.flags.mpg_control = Off;
 
 #if MPG_BUFFER_SIZE
-        mpg.rx_buf = calloc(sizeof(stream_mpg_buffer_t), 1);
+        mpg.rx_buf = calloc(1, sizeof(stream_mpg_buffer_t));
 #endif
         if(write_char)
             mpg.stream.set_enqueue_rt_handler(write_char);
