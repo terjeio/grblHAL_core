@@ -53,7 +53,7 @@ typedef struct st_block {
     float millimeters;
     float programmed_rate;
     char *message;                     //!< Message to be displayed when block is executed
-    output_command_t *output_commands; //!< Output commands (linked list) to be performed when block is executed
+    volatile output_command_t *output_commands; //!< Output commands (linked list) to be performed when block is executed
     axes_signals_t direction;
     gc_override_flags_t overrides;     //!< Block bitfield variable for overrides
     bool backlash_motion;

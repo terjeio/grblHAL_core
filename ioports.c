@@ -1443,7 +1443,7 @@ PROGMEM static const setting_group_detail_t ioport_groups[] = {
 PROGMEM static const setting_detail_t ioport_settings[] = {
     { Settings_IoPort_InvertIn, Group_AuxPorts, "Invert I/O Port inputs", NULL, Format_Bitfield, ports_cfg[Port_DigitalIn].port_names, NULL, NULL, Setting_NonCoreFn, aux_set_value, aux_get_value, is_setting_available },
 #ifdef AUX_SETTINGS_PULLUP
-    { Settings_IoPort_Pullup_Disable, Group_AuxPorts, "I/O Port inputs pullup disable", NULL, Format_Bitfield, digital.in.port_names, NULL, NULL, Setting_NonCoreFn, aux_set_value, aux_get_value, is_setting_available },
+    { Settings_IoPort_Pullup_Disable, Group_AuxPorts, "I/O Port inputs pullup disable", NULL, Format_Bitfield, ports_cfg[Port_DigitalIn].port_names, NULL, NULL, Setting_NonCoreFn, aux_set_value, aux_get_value, is_setting_available },
 #endif
     { Settings_IoPort_InvertOut, Group_AuxPorts, "Invert I/O Port outputs", NULL, Format_Bitfield, ports_cfg[Port_DigitalOut].port_names, NULL, NULL, Setting_NonCoreFn, aux_set_value, aux_get_value, is_setting_available },
 //    { Settings_IoPort_OD_Enable, Group_AuxPorts, "I/O Port outputs as open drain", NULL, Format_Bitfield, digital.out.port_names, NULL, NULL, Setting_NonCoreFn, aux_set_value, aux_get_value, is_setting_available }

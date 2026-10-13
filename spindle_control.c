@@ -760,7 +760,7 @@ FLASHMEM static bool _spindle_set_state (spindle_ptrs_t *spindle, spindle_state_
 
 FLASHMEM bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
-    return _spindle_set_state(spindle, state, rpm, 0);
+    return state_get() == STATE_CHECK_MODE || _spindle_set_state(spindle, state, rpm, 0);
 }
 
 /*! \brief If the spindle supports at speed functionality it will wait

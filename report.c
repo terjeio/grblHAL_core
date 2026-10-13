@@ -715,7 +715,11 @@ FLASHMEM void report_ngc_parameters (void)
             }
         }
         hal.stream.write(appendbuf(2, ":", uitoa(tlr_axis)));
+#if COMPATIBILITY_LEVEL <= 1
         hal.stream.write(appendbuf(2, ":", uitoa(system_pos_at_fixture(refpos, tlr_axis, CoordinateSystem_G59_3, TOOLSETTER_RADIUS))));
+#else
+        hal.stream.write(":0");
+#endif
         hal.stream.write("]" ASCII_EOL);
     }
 
@@ -1438,13 +1442,26 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
             if(ctrl_pin_state.value)
                 append = control_signals_tostring(append, ctrl_pin_state);
 
-            if(report->flags.all && hal.probe.is_triggered) {
-                if(hal.driver_cap.probe && hal.probe.is_triggered(Probe_Default))
-                    *append++ = 'I';
-                if(hal.driver_cap.toolsetter && hal.probe.is_triggered(Probe_Toolsetter))
-                    *append++ = 'J';
-                if(hal.driver_cap.probe2 && hal.probe.is_triggered(Probe_2))
-                    *append++ = 'K';
+            if(report->flags.all || (report->flags.extended && report->probe_states.aquired)) {
+
+                probe_states_t probe_states = probes_get_state();
+
+                if(report->flags.all ? probe_states.aquired : probe_states.flags != report->probe_states.flags) {
+                    if(probe_states.probe_triggered)
+                        *append++ = 'I';
+                    else if(report->flags.extended && probe_states.probe_triggered != report->probe_states.probe_triggered)
+                        *append++ = 'i';
+                    if(probe_states.toolsetter_triggered)
+                        *append++ = 'J';
+                    else if(report->flags.extended && probe_states.toolsetter_triggered != report->probe_states.toolsetter_triggered)
+                        *append++ = 'j';
+                    if(probe_states.probe2_triggered)
+                        *append++ = 'K';
+                    else if(report->flags.extended && probe_states.probe2_triggered != report->probe_states.probe2_triggered)
+                        *append++ = 'k';
+                }
+
+                report->probe_states.flags = probe_states.flags;
             }
 
             *append = '\0';

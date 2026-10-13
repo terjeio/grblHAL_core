@@ -660,6 +660,9 @@ static void stream_mpg_write (void *cmd)
             mpg.stream.report.flags.value = report_get_rt_flags_all().value;
             // no break
         case CMD_STATUS_REPORT:
+            if(!mpg.stream.report.flags.all)
+                mpg.stream.report.flags.extended = settings.status_report.extended;
+            // no break
         case CMD_STATUS_REPORT_LEGACY:
             report_realtime_status(mpg.stream.write, &mpg.stream.report);
             break;

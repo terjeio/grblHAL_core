@@ -639,12 +639,12 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
             break;
 
         case NGCFlowCtrl_RaiseAlarm:
-            if(!skipping && ngc_eval_expression(line, pos, &value) == Status_OK)
+            if(!skipping && (status = ngc_eval_expression(line, pos, &value)) == Status_OK)
                 system_raise_alarm((alarm_code_t)value);
             break;
 
         case NGCFlowCtrl_RaiseError:
-            if(!skipping && ngc_eval_expression(line, pos, &value) == Status_OK)
+            if(!skipping && (status = ngc_eval_expression(line, pos, &value)) == Status_OK)
                 status = (status_code_t)value;
             break;
 

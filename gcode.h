@@ -388,7 +388,11 @@ typedef union {
                  laser_is_motion     :1,
                  set_coolant         :1,
                  motion_mode_changed :1,
-                 reserved            :6;
+                 scale_changed       :1,
+                 spindle_event       :1,
+                 check_mode          :1,
+                 fs_changed          :1,
+                 reserved            :2;
     };
 } gc_parser_flags_t;
 
@@ -514,6 +518,12 @@ typedef union {
     };
 } spindle_cond_t;
 
+
+typedef struct {
+    coord_data_t xyz; //!< Center point
+    coord_data_t ijk; //!< Scaling factors
+} scale_factor_t;
+
 typedef struct {
     spindle_state_t state;          //!< {M3,M4,M5}
     spindle_rpm_mode_t rpm_mode;    //!< {G96,G97}
@@ -566,6 +576,7 @@ typedef struct {
     gc_override_flags_t override_ctrl;   //!< {M48,M49,M50,M51,M53,M56}
     cc_retract_mode_t retract_mode;      //!< {G98,G99}
     bool scaling_active;                 //!< {G50,G51}
+    scale_factor_t scale_factor;         //!< {G51}
     bool canned_cycle_active;
 #if ENABLE_ACCELERATION_PROFILES
     float acceleration_factor;           //!< {G187} currently active factor of acceleration profile
@@ -730,11 +741,6 @@ typedef struct {
 #endif
 } parser_state_t;
 
-typedef struct {
-    float xyz[N_AXIS]; //!< Center point
-    float ijk[N_AXIS]; //!< Scaling factors
-} scale_factor_t;
-
 extern parser_state_t gc_state;
 
 /*! \brief Parser block structure.
@@ -863,7 +869,7 @@ void gc_clear_offset (coord_system_id_t id);
 
 char *gc_coord_system_to_str (coord_system_id_t id);
 
-void gc_clear_output_commands (output_command_t *cmd);
+output_command_t *gc_clear_output_commands (volatile output_command_t *cmd);
 
 spindle_t *gc_spindle_get (spindle_num_t spindle);
 
