@@ -1271,7 +1271,7 @@ static void modbus_response_handler (modbus_response_t *response)
         if(response->num_values > 1)
             ngc_named_param_set("_value2", (float)(response->exception ? response->exception : response->values[1]));
         if(response->num_values == 3)
-            ngc_named_param_set("_value2", (float)(response->exception ? response->exception : response->values[2]));
+            ngc_named_param_set("_value3", (float)(response->exception ? response->exception : response->values[2]));
     }
 }
 

@@ -119,7 +119,7 @@ FLASHMEM static int fs_seek (vfs_file_t *file, size_t offset)
 
     vfs_errno = ENOENT;
 
-    if((fileh = (embedded_filehandle_t *)file->handle) && (vfs_errno = offset <= fileh->file->size ? 0 : EINVAL) == 0)
+    if((fileh = (embedded_filehandle_t *)&file->handle) && (vfs_errno = offset <= fileh->file->size ? 0 : EINVAL) == 0)
         fileh->remaining = fileh->file->size - offset;
 
     return vfs_errno == 0 ? 0 : -1;

@@ -360,13 +360,18 @@ FLASHMEM vfs_file_t *vfs_open (const char *filename, const char *mode)
 
 FLASHMEM void vfs_close (vfs_file_t *file)
 {
-    bool update = file->status.update;
+    vfs_t *fs;
+    bool update;
+
     vfs_errno = 0;
+
+    if((update = file->status.update))
+        fs = (vfs_t *)file->fs;
 
     ((vfs_t *)(file->fs))->fclose(file);
 
     if(update && vfs.on_fs_changed)
-        vfs.on_fs_changed((vfs_t *)file->fs);
+        vfs.on_fs_changed(fs);
 }
 
 FLASHMEM size_t vfs_read (void *buffer, size_t size, size_t count, vfs_file_t *file)

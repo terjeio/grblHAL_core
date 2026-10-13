@@ -723,7 +723,6 @@ typedef struct {
     bool file_run;                  //!< Tracks % command
     bool file_stream;               //!< Tracks streaming from file
     bool is_laser_ppi_mode;
-    bool is_rpm_rate_adjusted;
     bool tool_change;
     bool skip_blocks;               //!< true if skipping conditional blocks
     bool ccomp_off;                 //!< true when cutter compensation has been turned off

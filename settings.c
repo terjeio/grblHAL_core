@@ -2918,7 +2918,7 @@ FLASHMEM static bool settings_set_tool_data (tool_data_t *tool, bool persist)
     if(ok && tool->tool_id) {
         memcpy(&tool_data[tool->tool_id], tool, sizeof(tool_data_t));
         if(persist && hal.nvs.type != NVS_None)
-            hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool->tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool, sizeof(tool_data_t), true);
+            ok = hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool->tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool, sizeof(tool_data_t), true);
     }
 
     return ok;
@@ -2958,8 +2958,10 @@ FLASHMEM static status_code_t settings_load_tool_data (void)
     for(idx = 1; idx <= N_TOOLS; idx++) {
         if(hal.nvs.type != NVS_None) {
             if(!(hal.nvs.memcpy_from_nvs((uint8_t *)&tool_data[idx], NVS_ADDR_TOOL_TABLE + (idx - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
-                                           sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data[idx].tool_id == idx))
+                                           sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data[idx].tool_id == idx)) {
                 memset(&tool_data[idx], 0, sizeof(tool_data_t));
+                tool_data[idx].tool_id = (tool_id_t)idx;
+            }
         }
     }
 

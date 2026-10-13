@@ -125,6 +125,26 @@ inline static bool motion_is_lasercut (motion_mode_t motion)
     return motion == MotionMode_Linear || motion == MotionMode_CwArc || motion == MotionMode_CcwArc || motion == MotionMode_CubicSpline || motion == MotionMode_QuadraticSpline;
 }
 
+inline static spindle_t *spindle_is_laser (spindle_t *spindle)
+{
+#if N_SYS_SPINDLE > 1
+    if(spindle == NULL) {
+        uint_fast8_t idx = N_SYS_SPINDLE;
+        do {
+            idx--;
+            if(gc_state.modal.spindle[idx].hal && gc_state.modal.spindle[idx].hal->cap.laser)
+                return &gc_state.modal.spindle[idx];
+        } while(idx);
+        return NULL;
+    } else if(!spindle->hal->cap.laser)
+        return NULL;
+
+    return spindle;
+#else
+    return spindle && spindle->hal->cap.laser ? spindle : NULL;
+#endif
+}
+
 inline static bool no_word_value (char letter)
 {
     return letter == '\0' || (letter >= 'A' && letter <= 'Z') || letter == '$';
@@ -1300,7 +1320,7 @@ status_code_t gc_execute_block (char *block)
     int32_t spindle_id = 0;
     axis_command_t axis_command = AxisCommand_None;
     io_mcode_t port_command = (io_mcode_t)0;
-    spindle_t *sspindle = gc_state.spindle;
+    spindle_t *sspindle = gc_state.spindle, *laser = NULL;
     plane_t plane;
     coord_system_t coord_system;
 
@@ -1577,10 +1597,10 @@ status_code_t gc_execute_block (char *block)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
                         axis_command = AxisCommand_MotionMode;
                         word_bit.modal_group.G1 = On;
-                        gc_block.modal.motion = (motion_mode_t)int_value;
+                        gc_block.modal.motion = (motion_mode_t)(int_value * (int_value == 70 ? 1 : 10));
                         if(mantissa != 0) {
                             if(mantissa == 10 || mantissa == 20) {
-                                gc_block.modal.motion = gc_block.modal.motion * 10 + mantissa / 10;
+                                gc_block.modal.motion = gc_block.modal.motion + mantissa / 10;
                                 mantissa = 0; // Set to zero to indicate valid non-integer G command.
                             } else
                                 RETURN(Status_GcodeUnsupportedCommand);
@@ -3999,7 +4019,7 @@ status_code_t gc_execute_block (char *block)
         // Initialize planner data to current spindle and coolant modal state.
         memcpy(&plan_data.spindle, spindle, sizeof(spindle_t));
         plan_data.condition.coolant = gc_state.modal.coolant;
-        plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted || (spindle->state.ccw && spindle->hal->cap.laser);
+        plan_data.condition.is_rpm_rate_adjusted = spindle->state.ccw && spindle->hal->cap.laser;
 
         if((status_code_t)(int_value = (uint_fast16_t)mc_jog_execute(&plan_data, &gc_block, gc_state.position)) == Status_OK)
             memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_state.position));
@@ -4049,25 +4069,28 @@ status_code_t gc_execute_block (char *block)
             break;
     }
 
-    // If in laser mode, setup laser power based on current and past parser conditions.
-    if(sspindle && sspindle->hal->cap.laser) {
+    if(settings.mode == Mode_Laser) {
 
-        if(!motion_is_lasercut(gc_block.modal.motion))
-            gc_parser_flags.laser_disable = On;
+        // If in laser mode, setup laser power based on current and past parser conditions.
+        if((laser = spindle_is_laser(sspindle))) {
 
-        // Any motion mode with axis words is allowed to be passed from a spindle speed update.
-        // NOTE: G1 and G0 without axis words sets axis_command to none. G28/30 are intentionally omitted.
-        // TODO: Check sync conditions for M3 enabled motions that don't enter the planner. (zero length).
-        if(axis_words.mask && (axis_command == AxisCommand_MotionMode))
-            gc_parser_flags.laser_is_motion = On;
-        else if(sspindle->state.on && !sspindle->state.ccw) {
-            // M3 constant power laser requires planner syncs to update the laser when changing between
-            // a G1/2/3 motion mode state and vice versa when there is no motion in the line.
-            if(motion_is_lasercut(gc_state.modal.motion)) {
-                if(gc_parser_flags.laser_disable)
-                    gc_parser_flags.spindle_force_sync = On; // Change from G1/2/3 motion mode.
-            } else if(!gc_parser_flags.laser_disable) // When changing to a G1 motion mode without axis words from a non-G1/2/3 motion mode.
-                gc_parser_flags.spindle_force_sync = On;
+            if(!motion_is_lasercut(gc_block.modal.motion))
+                gc_parser_flags.laser_disable = On;
+
+            // Any motion mode with axis words is allowed to be passed from a spindle speed update.
+            // NOTE: G1 and G0 without axis words sets axis_command to none. G28/30 are intentionally omitted.
+            // TODO: Check sync conditions for M3 enabled motions that don't enter the planner. (zero length).
+            if(axis_words.mask && (axis_command == AxisCommand_MotionMode))
+                gc_parser_flags.laser_is_motion = On;
+            else if(laser->state.on && !laser->state.ccw) {
+                // M3 constant power laser requires planner syncs to update the laser when changing between
+                // a G1/2/3 motion mode state and vice versa when there is no motion in the line.
+                if(motion_is_lasercut(gc_state.modal.motion)) {
+                    if(gc_parser_flags.laser_disable)
+                        gc_parser_flags.spindle_force_sync = On; // Change from G1/2/3 motion mode.
+                } else if(!gc_parser_flags.laser_disable) // When changing to a G1 motion mode without axis words from a non-G1/2/3 motion mode.
+                    gc_parser_flags.spindle_force_sync = On;
+            }
         }
     }
 
@@ -4267,8 +4290,6 @@ status_code_t gc_execute_block (char *block)
                 spindle_t *sys_spindle = &gc_state.modal.spindle[--idx];
                 if(sys_spindle->hal) {
 
-                    gc_state.is_rpm_rate_adjusted = gc_block.spindle_modal.state.ccw && !gc_parser_flags.laser_disable && sys_spindle->hal->cap.laser;
-
                     if((spindle_ok = sys_spindle->state.value != gc_block.spindle_modal.state.value)) {
 
                         if((spindle_ok = spindle_set_state_synced(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm, sys_spindle->rpm_mode))) {
@@ -4289,8 +4310,6 @@ status_code_t gc_execute_block (char *block)
 #endif // N_SYS_SPINDLE > 1
 
         if((spindle_ok = sspindle->state.value != gc_block.spindle_modal.state.value)) {
-
-            gc_state.is_rpm_rate_adjusted = gc_block.spindle_modal.state.ccw && !gc_parser_flags.laser_disable && sspindle->hal->cap.laser;
 
             if((spindle_ok = spindle_set_state_synced(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm, sspindle->rpm_mode)))
                 sspindle->state = sspindle->hal->param->state = gc_block.spindle_modal.state;
@@ -4399,8 +4418,8 @@ status_code_t gc_execute_block (char *block)
 // TODO: Recheck spindle running in CCS mode (is_rpm_pos_adjusted == On)?
 
     plan_data.spindle.state = gc_state.spindle->state; // Set condition flag for planner use.
-    plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted;
-    plan_data.condition.is_laser_ppi_mode = gc_state.is_rpm_rate_adjusted && gc_state.is_laser_ppi_mode;
+    if((plan_data.condition.is_rpm_rate_adjusted = laser && !gc_parser_flags.laser_disable && laser->state.on && laser->state.ccw))
+        plan_data.condition.is_laser_ppi_mode = gc_state.is_laser_ppi_mode;
 
     // [8. Coolant control ]:
     if(command_words.M8) {

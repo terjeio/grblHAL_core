@@ -401,7 +401,7 @@ FLASHMEM struct tm *get_datetime (const char *s)
                     break;
 
                 case 2:
-                    if(c == 'T' && value >= 1 && value <= (mdays[dt.tm_mon >= 0 ? dt.tm_mon : 0] + (dt.tm_mon == 1 && dt.tm_year != 100 && (dt.tm_year % 4) == 0 ? 1 : 0)))
+                    if(c == 'T' && value >= 1 && value <= (mdays[dt.tm_mon >= 0 ? dt.tm_mon : 0] + (dt.tm_mon == 1 && (dt.tm_year % 4) == 0 ? 1 : 0)))
                         dt.tm_mday = value;
                     break;
 
