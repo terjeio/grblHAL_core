@@ -96,34 +96,34 @@ Do not alter values!
 */
 typedef enum {
     MotionMode_Seek = 0,                    //!< 0 - G0 - Default, must be zero
-    MotionMode_Linear = 1,                  //!< 1 - G1
-    MotionMode_CwArc = 2,                   //!< 2 - G2
-    MotionMode_CcwArc = 3,                  //!< 3 - G3
-    MotionMode_CubicSpline = 5,             //!< 5 - G5
+    MotionMode_Linear = 10,                 //!< 10 - G1
+    MotionMode_CwArc = 20,                  //!< 20 - G2
+    MotionMode_CcwArc = 30,                 //!< 30 - G3
+    MotionMode_CubicSpline = 50,            //!< 50 - G5
     MotionMode_QuadraticSpline = 51,        //!< 51 - G5.1
-    MotionMode_SpindleSynchronized = 33,    //!< 33 - G33
+    MotionMode_SpindleSynchronized = 330,   //!< 330 - G33
     MotionMode_RigidTapping = 331,          //!< 331 - G33.1
-    MotionMode_LatheFinishing = 70,         //!< 70 - G70
-    MotionMode_LatheRoughingZ = 710,        //!< 71 - G71
+    MotionMode_LatheFinishing = 700,        //!< 700 - G70
+    MotionMode_LatheRoughingZ = 710,        //!< 710 - G71
     MotionMode_LatheRoughingZ1 = 711,       //!< 711 - G71.1
     MotionMode_LatheRoughingZ2 = 712,       //!< 712 - G71.2
     MotionMode_LatheRoughingX = 720,        //!< 72 - G72
     MotionMode_LatheRoughingX1 = 721,       //!< 721 - G72.1
     MotionMode_LatheRoughingX2 = 722,       //!< 722 - G72.2
-    MotionMode_DrillChipBreak = 73,         //!< 73 - G73
-    MotionMode_Threading = 76,              //!< 76 - G76
-    MotionMode_CannedCycle81 = 81,          //!< 81 - G81, drill
-    MotionMode_CannedCycle82 = 82,          //!< 82 - G82, drill with dwell
-    MotionMode_CannedCycle83 = 83,          //!< 83 - G83, peck drill
-    MotionMode_CannedCycle84 = 84,          //!< 83 - G84, right hand tapping - experimental
-    MotionMode_CannedCycle85 = 85,          //!< 85 - G85, not implemented
-    MotionMode_CannedCycle86 = 86,          //!< 86 - G86, not implemented
-    MotionMode_CannedCycle89 = 89,          //!< 89 - G89, not implemented
-    MotionMode_ProbeToward = 140,           //!< 140 - G38.2
-    MotionMode_ProbeTowardNoError = 141,    //!< 141 - G38.3
-    MotionMode_ProbeAway = 142,             //!< 142 - G38.4
-    MotionMode_ProbeAwayNoError = 143,      //!< 143 - G38.5
-    MotionMode_None = 80                    //!< 80 - G80
+    MotionMode_DrillChipBreak = 730,        //!< 730 - G73
+    MotionMode_Threading = 760,             //!< 760 - G76
+    MotionMode_CannedCycle81 = 810,         //!< 810 - G81, drill
+    MotionMode_CannedCycle82 = 820,         //!< 820 - G82, drill with dwell
+    MotionMode_CannedCycle83 = 830,         //!< 830 - G83, peck drill
+    MotionMode_CannedCycle84 = 840,         //!< 830 - G84, right hand tapping - experimental
+    MotionMode_CannedCycle85 = 850,         //!< 850 - G85, not implemented
+    MotionMode_CannedCycle86 = 860,         //!< 860 - G86, not implemented
+    MotionMode_CannedCycle89 = 890,         //!< 890 - G89, not implemented
+    MotionMode_ProbeToward = 382,           //!< 140 - G38.2
+    MotionMode_ProbeTowardNoError = 383,    //!< 141 - G38.3
+    MotionMode_ProbeAway = 384,             //!< 142 - G38.4
+    MotionMode_ProbeAwayNoError = 385,      //!< 143 - G38.5
+    MotionMode_None = 800                   //!< 800 - G80
 } motion_mode_t;
 
 /*! Modal Group G2: Plane select

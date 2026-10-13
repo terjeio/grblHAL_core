@@ -46,7 +46,7 @@
 #endif
 
 static char buf[(STRLEN_COORDVALUE + 1) * N_AXIS];
-static char *(*get_axis_values)(float *axis_values);
+static char *(*get_axis_values)(float *axis_values, bool position);
 static char *(*get_axis_value)(float value);
 static char *(*get_rate_value)(float value);
 static const char vbar[2] = { '|', '\0' };
@@ -74,14 +74,14 @@ static char *appendbuf (int argc, ...)
 }
 
 // Convert axis position values to null terminated string (mm).
-static char *get_axis_values_mm (float *axis_values)
+static char *get_axis_values_metric (float *axis_values, bool position)
 {
     uint_fast32_t idx;
 
     buf[0] = '\0';
 
     for (idx = 0; idx < system_n_axis(); idx++) {
-        if(idx == X_AXIS && gc_state.modal.diameter_mode)
+        if(idx == X_AXIS && position && gc_state.modal.diameter_mode)
             strcat(buf, ftoa(axis_values[idx] * 2.0f, N_DECIMAL_COORDVALUE_MM));
         else
             strcat(buf, ftoa(axis_values[idx], N_DECIMAL_COORDVALUE_MM));
@@ -93,14 +93,14 @@ static char *get_axis_values_mm (float *axis_values)
 }
 
 // Convert axis position values to null terminated string (inch).
-static char *get_axis_values_inches (float *axis_values)
+static char *get_axis_values_imperial (float *axis_values, bool position)
 {
     uint_fast32_t idx;
 
     buf[0] = '\0';
 
     for (idx = 0; idx < system_n_axis(); idx++) {
-        if(idx == X_AXIS && gc_state.modal.diameter_mode)
+        if(idx == X_AXIS && position && gc_state.modal.diameter_mode)
             strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM * 2.0f, N_DECIMAL_COORDVALUE_INCH));
 #if N_AXIS > 3
         else if(idx > Z_AXIS && bit_istrue(settings.steppers.is_rotary.mask, bit(idx)))
@@ -116,25 +116,25 @@ static char *get_axis_values_inches (float *axis_values)
 }
 
 // Convert rate value to null terminated string (mm).
-static char *get_axis_value_mm (float value)
+static char *get_axis_value_metric (float value)
 {
     return strcpy(buf, ftoa(value, N_DECIMAL_COORDVALUE_MM));
 }
 
 // Convert rate value to null terminated string (mm).
-static char *get_axis_value_inches (float value)
+static char *get_axis_value_imperial (float value)
 {
     return strcpy(buf, ftoa(value * INCH_PER_MM, N_DECIMAL_COORDVALUE_INCH));
 }
 
 // Convert rate value to null terminated string (mm).
-static char *get_rate_value_mm (float value)
+static char *get_rate_value_metric (float value)
 {
     return uitoa((uint32_t)value);
 }
 
 // Convert rate value to null terminated string (mm).
-static char *get_rate_value_inch (float value)
+static char *get_rate_value_imperial (float value)
 {
     return uitoa((uint32_t)(value * INCH_PER_MM));
 }
@@ -199,9 +199,9 @@ inline static char *control_signals_tostring (char *buf, control_signals_t signa
 
 FLASHMEM void report_init (void)
 {
-    get_axis_value = settings.flags.report_inches ? get_axis_value_inches : get_axis_value_mm;
-    get_axis_values = settings.flags.report_inches ? get_axis_values_inches : get_axis_values_mm;
-    get_rate_value = settings.flags.report_inches ? get_rate_value_inch : get_rate_value_mm;
+    get_axis_value = settings.flags.report_inches ? get_axis_value_imperial : get_axis_value_metric;
+    get_axis_values = settings.flags.report_inches ? get_axis_values_imperial : get_axis_values_metric;
+    get_rate_value = settings.flags.report_inches ? get_rate_value_imperial : get_rate_value_metric;
 }
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -543,7 +543,7 @@ FLASHMEM void report_probe_parameters (void)
     float print_position[N_AXIS];
     system_convert_array_steps_to_mpos(print_position, sys.probe_position);
     hal.stream.write("[PRB:");
-    hal.stream.write(get_axis_values(print_position));
+    hal.stream.write(get_axis_values(print_position, true));
     hal.stream.write(sys.flags.probe_succeeded ? ":1" : ":0");
     hal.stream.write("]" ASCII_EOL);
 }
@@ -553,7 +553,7 @@ FLASHMEM void report_probe_parameters (void)
 FLASHMEM void report_home_position (void)
 {
     hal.stream.write("[HOME:");
-    hal.stream.write(get_axis_values(sys.home_position));
+    hal.stream.write(get_axis_values(sys.home_position, true)); // TODO: -> false?
     hal.stream.write(":");
     hal.stream.write(uitoa(sys.homed.mask));
     hal.stream.write("]" ASCII_EOL);
@@ -566,7 +566,7 @@ FLASHMEM void report_tool_offsets (void)
 #if TOOL_LENGTH_OFFSET_AXIS >= 0
     hal.stream.write(get_axis_value(gc_state.modal.tool_length_offset[TOOL_LENGTH_OFFSET_AXIS]));
 #else
-    hal.stream.write(get_axis_values(gc_state.modal.tool_length_offset));
+    hal.stream.write(get_axis_values(gc_state.modal.tool_length_offset, true)); // TODO: -> false?
 #endif
     hal.stream.write("]" ASCII_EOL);
 }
@@ -617,7 +617,7 @@ FLASHMEM void report_ngc_parameters (void)
 
     if(gc_state.modal.scaling_active) {
         hal.stream.write("[G51:");
-        hal.stream.write(get_axis_values(gc_get_scaling()));
+        hal.stream.write(get_axis_values_metric(gc_get_scaling(), false));
         hal.stream.write("]" ASCII_EOL);
     }
 
@@ -650,7 +650,7 @@ FLASHMEM void report_ngc_parameters (void)
 
         if(idx != CoordinateSystem_G92) {
             hal.stream.write(":");
-            hal.stream.write(get_axis_values(offset.coord.values));
+            hal.stream.write(get_axis_values(offset.coord.values, true));
 #ifdef ROTATION_ENABLE
             if(idx < N_WorkCoordinateSystems) {
                 hal.stream.write(":");
@@ -663,7 +663,7 @@ FLASHMEM void report_ngc_parameters (void)
 
     // Print G92, G92.1 which are not persistent in memory
     hal.stream.write("92:");
-    hal.stream.write(get_axis_values(gc_state.g92_offset.coord.values));
+    hal.stream.write(get_axis_values(gc_state.g92_offset.coord.values, true));
     hal.stream.write("]" ASCII_EOL);
 
     tool_data_t *tool_data;
@@ -675,7 +675,7 @@ FLASHMEM void report_ngc_parameters (void)
             hal.stream.write("[T:");
             hal.stream.write(uitoa(tool_data->tool_id));
             hal.stream.write("|");
-            hal.stream.write(get_axis_values(tool_data->offset.values));
+            hal.stream.write(get_axis_values(tool_data->offset.values, true));
             hal.stream.write("|");
             hal.stream.write(get_axis_value(tool_data->radius));
             hal.stream.write("|6,0,0|");
@@ -745,14 +745,13 @@ FLASHMEM static char *motionmode_to_str (char *buf, motion_mode_t mode)
 {
     strcpy(buf, "G");
 
-    if(mode == MotionMode_QuadraticSpline || mode == MotionMode_RigidTapping) {
-        strcat(buf, uitoa(mode / 10));
-        strcat(buf, ".1");
-    } else if(mode >= MotionMode_ProbeToward) {
-        strcat(buf, "38.");
-        strcat(buf, uitoa((uint32_t)(mode - (MotionMode_ProbeToward - 2))));
-    } else
-        strcat(buf, uitoa((uint32_t)mode));
+    uint_fast8_t submode = mode % 10;
+
+    strcat(buf, uitoa((mode - submode) / 10));
+    if(submode) {
+        strcat(buf, ".");
+        strcat(buf, uitoa(submode));
+    }
 
     return buf;
 }
@@ -1339,7 +1338,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
 
     // Report position
     stream_write(settings.status_report.machine_position ? "|MPos:" : "|WPos:");
-    stream_write(get_axis_values(print_position));
+    stream_write(get_axis_values(print_position, true));
 
     // Returns planner and output stream buffer states.
 
@@ -1361,7 +1360,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
     if(report->flags.distance_to_go) {
         // Report distance-to-go.
         stream_write("|DTG:");
-        stream_write(get_axis_values(dist_remaining));
+        stream_write(get_axis_values(dist_remaining, true));
     }   
 
     spindle_ptrs_t *spindle_0;
@@ -1515,7 +1514,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
                     wco[idx] = gc_get_offset(idx, true);
             }
             stream_write("|WCO:");
-            stream_write(get_axis_values(wco));
+            stream_write(get_axis_values(wco, true));
 #ifdef ROTATION_ENABLE
 //            stream_write(":");
 //            stream_write(ftoa(gc_state.modal.g5x_offset.data.rotation, 2));

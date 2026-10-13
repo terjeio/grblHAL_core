@@ -1175,6 +1175,11 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
     return block;
 }
 
+inline static int32_t cv (int32_t int_value, uint_fast16_t mantissa)
+{
+    return int_value * 10 + (mantissa ? mantissa / 10 : 0);
+}
+
 // Parses and executes one block (line) of 0-terminated G-Code.
 // In this function, all units and positions are converted and exported to internal functions
 // in terms of (mm, mm/min) and absolute machine coordinates, respectively.
@@ -1552,42 +1557,40 @@ status_code_t gc_execute_block (char *block)
                     case 33: case 76:
                         if(axis_command)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
+                        if(mantissa && !(int_value == 33 && mantissa == 10))
+                            RETURN(Status_GcodeUnsupportedCommand);
                         axis_command = AxisCommand_MotionMode;
                         word_bit.modal_group.G1 = On;
-                        gc_block.modal.motion = (motion_mode_t)int_value;
-                        if(mantissa == 10) {
-                            mantissa = 0;
-                            gc_block.modal.motion = MotionMode_RigidTapping;
-                        }
+                        gc_block.modal.motion = (motion_mode_t)cv(int_value, mantissa);
                         gc_block.modal.canned_cycle_active = false;
+                        mantissa = 0;
                         break;
 
                     case 38:
-                        if(!(hal.probe.get_state && ((mantissa == 20) || (mantissa == 30) || (mantissa == 40) || (mantissa == 50))))
+                        if(axis_command)
+                            RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
+                        if(!(hal.probe.get_state && (mantissa == 20 || mantissa == 30 || mantissa == 40 || mantissa == 50)))
                             RETURN(Status_GcodeUnsupportedCommand); // [probing not supported by driver or unsupported G38.x command]
-                        int_value += (mantissa / 10) + 100;
-                        mantissa = 0; // Set to zero to indicate valid non-integer G command.
-                        // No break. Continues to next line.
+                        word_bit.modal_group.G1 = On;
+                        gc_block.modal.motion = (motion_mode_t)cv(int_value, mantissa);
+                        gc_block.modal.canned_cycle_active = false;
+                        mantissa = 0;
+                        break;
 
                     case 0: case 1: case 2: case 3: case 5:
-
                         // Check for G0/1/2/3/38 being called with G10/28/30/92 on same block.
                         // * G43.1 is also an axis command but is not explicitly defined this way.
-                        if (axis_command)
+                        if(axis_command)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
+                        if(mantissa && !(int_value == 5 && mantissa == 10))
+                            RETURN(Status_GcodeUnsupportedCommand);
                         axis_command = AxisCommand_MotionMode;
+                        mantissa = 0;
                         // No break. Continues to next line.
 
                     case 80:
                         word_bit.modal_group.G1 = On;
-                        if(int_value == 5 && mantissa != 0) {
-                            if(mantissa == 10) {
-                                gc_block.modal.motion = MotionMode_QuadraticSpline;
-                                mantissa = 0; // Set to zero to indicate valid non-integer G command.
-                            } else
-                                RETURN(Status_GcodeUnsupportedCommand);
-                        } else
-                            gc_block.modal.motion = (motion_mode_t)int_value;
+                        gc_block.modal.motion = (motion_mode_t)cv(int_value, mantissa);
                         gc_block.modal.canned_cycle_active = false;
                         break;
 
@@ -1610,12 +1613,12 @@ status_code_t gc_execute_block (char *block)
 #endif
 
                     case 73: case 81: case 82: case 83: case 84: case 85: case 86: case 89:
-                        if (axis_command)
+                        if(axis_command)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
                         axis_command = AxisCommand_MotionMode;
                         word_bit.modal_group.G1 = On;
                         gc_block.modal.canned_cycle_active = true;
-                        gc_block.modal.motion = (motion_mode_t)int_value;
+                        gc_block.modal.motion = (motion_mode_t)cv(int_value, 0);
                         gc_parser_flags.canned_cycle_change = gc_block.modal.motion != gc_state.modal.motion;
                         break;
 
@@ -1780,7 +1783,7 @@ status_code_t gc_execute_block (char *block)
                     default: RETURN(Status_GcodeUnsupportedCommand); // [Unsupported G command]
                 } // end G-value switch
 
-                if (mantissa > 0)
+                if(mantissa > 0)
                     RETURN(Status_GcodeCommandValueNotInteger); // [Unsupported or invalid Gxx.x command]
 
                 // Check for more than one command per modal group violations in the current block
@@ -2912,7 +2915,8 @@ status_code_t gc_execute_block (char *block)
             gc_block.words.d = Off;
         }
 
-        gc_state.ccomp_off = gc_state.modal.cutter_comp.side && !gc_block.modal.cutter_comp.side;
+        if(gc_state.ccomp_off = gc_state.modal.cutter_comp.side && !gc_block.modal.cutter_comp.side)
+            gc_block.modal.cutter_comp.dynamic = false;
     }
 
 #endif
