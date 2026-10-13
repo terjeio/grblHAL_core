@@ -2791,7 +2791,7 @@ status_code_t gc_execute_block (char *block)
   #if N_AXIS > 3
                 if(idx <= Z_AXIS)
   #endif
-                gc_block.values.uvw[idx] *= gc_block.modal.scale_factor.ijk[idx];
+                gc_block.values.uvw[idx] *= gc_block.modal.scale_factor.ijk.values[idx];
 #endif
             }
         } while(idx);
