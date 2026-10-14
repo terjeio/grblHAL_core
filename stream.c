@@ -307,9 +307,10 @@ FLASHMEM static stream_connection_t *add_connection (const io_stream_t *stream)
         last->next = connection;
     }
 
-    connection->is_up = stream->is_connected ?
-                         stream->is_connected :
-                          (stream->state.is_usb && base.stream != stream ? is_not_connected : stream_connected);
+    if(connection)
+        connection->is_up = stream->is_connected ?
+                             stream->is_connected :
+                              (stream->state.is_usb && base.stream != stream ? is_not_connected : stream_connected);
 
     return connection;
 }

@@ -95,19 +95,19 @@ typedef enum {
 Do not alter values!
 */
 typedef enum {
-    MotionMode_Seek = 0,                    //!< 0 - G0 - Default, must be zero
-    MotionMode_Linear = 10,                 //!< 10 - G1
-    MotionMode_CwArc = 20,                  //!< 20 - G2
-    MotionMode_CcwArc = 30,                 //!< 30 - G3
-    MotionMode_CubicSpline = 50,            //!< 50 - G5
-    MotionMode_QuadraticSpline = 51,        //!< 51 - G5.1
+    MotionMode_Seek = 0,                    //!<   0 - G0 - Default, must be zero
+    MotionMode_Linear = 10,                 //!<  10 - G1
+    MotionMode_CwArc = 20,                  //!<  20 - G2
+    MotionMode_CcwArc = 30,                 //!<  30 - G3
+    MotionMode_CubicSpline = 50,            //!<  50 - G5
+    MotionMode_QuadraticSpline = 51,        //!<  51 - G5.1
     MotionMode_SpindleSynchronized = 330,   //!< 330 - G33
     MotionMode_RigidTapping = 331,          //!< 331 - G33.1
     MotionMode_LatheFinishing = 700,        //!< 700 - G70
     MotionMode_LatheRoughingZ = 710,        //!< 710 - G71
     MotionMode_LatheRoughingZ1 = 711,       //!< 711 - G71.1
     MotionMode_LatheRoughingZ2 = 712,       //!< 712 - G71.2
-    MotionMode_LatheRoughingX = 720,        //!< 72 - G72
+    MotionMode_LatheRoughingX = 720,        //!< 720 - G72
     MotionMode_LatheRoughingX1 = 721,       //!< 721 - G72.1
     MotionMode_LatheRoughingX2 = 722,       //!< 722 - G72.2
     MotionMode_DrillChipBreak = 730,        //!< 730 - G73
@@ -119,10 +119,10 @@ typedef enum {
     MotionMode_CannedCycle85 = 850,         //!< 850 - G85, not implemented
     MotionMode_CannedCycle86 = 860,         //!< 860 - G86, not implemented
     MotionMode_CannedCycle89 = 890,         //!< 890 - G89, not implemented
-    MotionMode_ProbeToward = 382,           //!< 140 - G38.2
-    MotionMode_ProbeTowardNoError = 383,    //!< 141 - G38.3
-    MotionMode_ProbeAway = 384,             //!< 142 - G38.4
-    MotionMode_ProbeAwayNoError = 385,      //!< 143 - G38.5
+    MotionMode_ProbeToward = 382,           //!< 382 - G38.2
+    MotionMode_ProbeTowardNoError = 383,    //!< 383 - G38.3
+    MotionMode_ProbeAway = 384,             //!< 384 - G38.4
+    MotionMode_ProbeAwayNoError = 385,      //!< 385 - G38.5
     MotionMode_None = 800                   //!< 800 - G80
 } motion_mode_t;
 
