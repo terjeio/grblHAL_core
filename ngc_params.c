@@ -519,7 +519,7 @@ FLASHMEM float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_motion_mode:
-            value = (float)(gc_state.modal.motion * 10); // TODO: Fix G38.x
+            value = (float)gc_state.modal.motion;
             break;
 
         case NGCParam_plane:

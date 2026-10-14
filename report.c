@@ -760,7 +760,7 @@ FLASHMEM static char *motionmode_to_str (char *buf, motion_mode_t mode)
 FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
 {
     stream_write("[GC:");
-    stream_write(motionmode_to_str(buf, gc_state.modal.motion));
+    stream_write(motionmode_to_str(buf, st_get_motion_mode()));
     stream_write(" ");
     stream_write(gc_coord_system_to_str(gc_state.modal.g5x_offset.id));
 
@@ -1625,16 +1625,19 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
         static tool_id_t tool_id;
         static float feed_rate, spindle_rpm;
         static gc_modal_t last_state;
+        static motion_mode_t motion_mode;
         static bool g92_active;
 #if NGC_PARAMETERS_ENABLE
         static bool g66_active;
 #endif
 
         spindle_t *spindle = gc_spindle_get(0);
+        motion_mode_t new_mode = st_get_motion_mode();
 
         gcode_mode_changed = feed_rate != gc_state.feed_rate ||
                               spindle_rpm != spindle->rpm ||
-                               tool_id != gc_state.tool->tool_id
+                               tool_id != gc_state.tool->tool_id ||
+                                motion_mode != new_mode
 #if NGC_PARAMETERS_ENABLE
                                 || g66_active != !!gc_state.g66_args;
 #else
@@ -1645,6 +1648,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
             feed_rate = gc_state.feed_rate;
             tool_id = gc_state.tool->tool_id;
             spindle_rpm = spindle->rpm;
+            motion_mode = new_mode;
 #if NGC_PARAMETERS_ENABLE
             g66_active = !!gc_state.g66_args;
 #endif

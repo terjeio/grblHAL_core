@@ -626,8 +626,14 @@ FLASHMEM bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_da
         if(repeats && gc_state.modal.distance_incremental) {
             position[plane.axis_0] += canned->xyz[plane.axis_0];
             position[plane.axis_1] += canned->xyz[plane.axis_1];
+#if PLANNER_ADD_MOTION_MODE
+//??            pl_data->motion_mode = MotionMode_Seek;
+#endif
             if(!mc_line(position, pl_data))
                 return false;
+#if PLANNER_ADD_MOTION_MODE
+//??            pl_data->motion_mode = motion;
+#endif
         }
     }
 

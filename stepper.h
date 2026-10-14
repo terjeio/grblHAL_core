@@ -49,6 +49,9 @@ typedef struct st_block {
     struct st_block *next;            //!< Pointer to next element in cirular list of blocks
     steps_t steps;
     uint32_t step_event_count;
+#if PLANNER_ADD_MOTION_MODE
+    motion_mode_t motion_mode;
+#endif
     float steps_per_mm;
     float millimeters;
     float programmed_rate;
@@ -158,5 +161,6 @@ void stepper_driver_interrupt_handler (void);
 
 offset_id_t st_get_offset_id (void);
 axes_signals_t st_get_enable_out (void);
+motion_mode_t st_get_motion_mode (void);
 
 #endif

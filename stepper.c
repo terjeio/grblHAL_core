@@ -954,6 +954,9 @@ void st_prep_buffer (void)
                 st_prep_block->offset_id = pl_block->offset_id;
                 st_prep_block->backlash_motion = pl_block->condition.backlash_motion;
                 st_prep_block->message = pl_block->message;
+#if PLANNER_ADD_MOTION_MODE
+                st_prep_block->motion_mode = pl_block->motion_mode;
+#endif
                 pl_block->message = NULL;
                 pl_block->output_commands = NULL;
 
@@ -968,6 +971,7 @@ void st_prep_buffer (void)
 #ifdef KINEMATICS_API
                 prep.rate_multiplier = pl_block->rate_multiplier;
 #endif
+
                 if (sys.step_control.execute_hold || prep.recalculate.decel_override) {
                     // New block loaded mid-hold. Override planner block entry speed to enforce deceleration.
                     prep.current_speed = prep.exit_speed;
@@ -1462,6 +1466,15 @@ float st_get_realtime_rate (void)
             ? prep.current_speed
 #endif
             : 0.0f;
+}
+
+motion_mode_t st_get_motion_mode (void)
+{
+#if PLANNER_ADD_MOTION_MODE
+    return st.exec_block ? st.exec_block->motion_mode : gc_state.modal.motion;
+#else
+    return gc_state.modal.motion;
+#endif
 }
 
 offset_id_t st_get_offset_id (void)

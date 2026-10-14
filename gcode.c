@@ -1585,30 +1585,26 @@ status_code_t gc_execute_block (char *block)
                         if(mantissa && !(int_value == 5 && mantissa == 10))
                             RETURN(Status_GcodeUnsupportedCommand);
                         axis_command = AxisCommand_MotionMode;
-                        mantissa = 0;
                         // No break. Continues to next line.
 
                     case 80:
                         word_bit.modal_group.G1 = On;
                         gc_block.modal.motion = (motion_mode_t)cv(int_value, mantissa);
                         gc_block.modal.canned_cycle_active = false;
+                        mantissa = 0;
                         break;
 
 #if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
                     case 70: case 71: case 72:
                         if(axis_command)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
+                        if(mantissa && !(int_value != 70 && (mantissa == 10 || mantissa == 20))
+                            RETURN(Status_GcodeUnsupportedCommand);
                         axis_command = AxisCommand_MotionMode;
                         word_bit.modal_group.G1 = On;
-                        gc_block.modal.motion = (motion_mode_t)(int_value * (int_value == 70 ? 1 : 10));
-                        if(mantissa != 0) {
-                            if(mantissa == 10 || mantissa == 20) {
-                                gc_block.modal.motion = gc_block.modal.motion + mantissa / 10;
-                                mantissa = 0; // Set to zero to indicate valid non-integer G command.
-                            } else
-                                RETURN(Status_GcodeUnsupportedCommand);
-                        } else
-                            gc_block.modal.canned_cycle_active = false;
+                        gc_block.modal.motion = (motion_mode_t)cv(int_value, mantissa);
+                        gc_block.modal.canned_cycle_active = false;
+                        mantissa = 0;
                         break;
 #endif
 
@@ -4379,6 +4375,7 @@ status_code_t gc_execute_block (char *block)
 
                 if(actions->command.M9) {
                     actions->command.M9 = Off;
+                    gc_state.modal.override_ctrl = gc_block.modal.override_ctrl;
                     plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
                 }
 
