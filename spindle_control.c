@@ -596,7 +596,7 @@ FLASHMEM static rpm_override_t *_get_ramp (spindle_ptrs_t *spindle)
     if(rampd.spindle == spindle)
         ramp = &rampd;
     else {
-        rpm_override_t *ramp = rampd->next;
+        rpm_override_t *ramp = rampd.next;
         while(ramp && ramp->spindle != spindle)
             ramp = ramp->next;
     }
