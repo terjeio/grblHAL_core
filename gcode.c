@@ -1598,7 +1598,7 @@ status_code_t gc_execute_block (char *block)
                     case 70: case 71: case 72:
                         if(axis_command)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
-                        if(mantissa && !(int_value != 70 && (mantissa == 10 || mantissa == 20))
+                        if(mantissa && !(int_value != 70 && (mantissa == 10 || mantissa == 20)))
                             RETURN(Status_GcodeUnsupportedCommand);
                         axis_command = AxisCommand_MotionMode;
                         word_bit.modal_group.G1 = On;
