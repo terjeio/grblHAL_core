@@ -616,15 +616,8 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                             {
                                 uint_fast8_t pos = 0;
                                 if(!stack[stack_idx].skip && (status = ngc_eval_expression(stack[stack_idx].expr, &pos, &value)) == Status_OK) {
-                                    if(!(stack[stack_idx].skip = value == 0))
+                                    if(!(stack[stack_idx].skip = value == 0.0f))
                                         stream_reposition(stack[stack_idx].file, stack[stack_idx].file_pos, stack[stack_idx].line_number);
-                                }
-                                if(stack[stack_idx].skip) {
-                                    if(stack[stack_idx].expr) {
-                                        free(stack[stack_idx].expr);
-                                        stack[stack_idx].expr = NULL;
-                                    }
-                                    stack_pull();
                                 }
                             }
                             break;

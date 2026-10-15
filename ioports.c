@@ -1545,7 +1545,7 @@ FLASHMEM void ioport_setting_changed (setting_id_t id)
 
                             if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask) {
                                 in_config.inverted = !!(settings.control_invert.mask & ctrl.mask);
-                                in_config.pull_mode = (settings.control_disable_pullup.mask & ctrl.mask) ? PullMode_None : PullMode_Up;
+                                in_config.pull_mode = (settings.control_disable_pullup.mask & ctrl.mask) ? PullMode_Down : PullMode_Up;
                             } else {
                                 in_config.inverted = !!(settings.ioport.invert_in.mask & (1 << port));
                                 in_config.pull_mode = (pull_mode_t)xbar->mode.pull_mode;

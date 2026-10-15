@@ -57,6 +57,9 @@ void mc_backlash_init (axes_signals_t axes)
                 backlash_comp.values[idx] = (float)steps / settings.axis[idx].steps_per_mm;
                 bit_true(backlash_enabled.mask, bit(idx));
                 BIT_SET(dir_negative.mask, bit(idx), bit_isfalse(settings.homing.dir_mask.mask, bit(idx)));
+            } else {
+                backlash_comp.values[idx] = 0.0f;
+                bit_false(backlash_enabled.mask, bit(idx));
             }
         }
     } while(idx);

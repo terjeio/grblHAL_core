@@ -609,8 +609,10 @@ FLASHMEM char *vfs_getcwd (char *buf, size_t len)
         if(buf) {
             if(cwdlen < len)
                 strcpy(buf, cwd);
-            else
+            else {
+                buf = NULL;
                 vfs_errno = ERANGE;
+            }
             free(cwd);
         } else if(len == 0 || cwdlen < len)
             buf = cwd;
@@ -619,11 +621,11 @@ FLASHMEM char *vfs_getcwd (char *buf, size_t len)
             vfs_errno = ERANGE;
         }
     } else {
-        cwdlen = len;
+        buf = NULL;
         vfs_errno = ENOMEM;
     }
 
-    return cwdlen < len ? buf : NULL;
+    return buf;
 }
 
 FLASHMEM int vfs_chmod (const char *filename, vfs_st_mode_t attr, vfs_st_mode_t mask)
