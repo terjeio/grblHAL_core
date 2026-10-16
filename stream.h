@@ -78,7 +78,6 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "probe.h"
 #include "vfs.h"
 
 typedef enum {
