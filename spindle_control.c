@@ -581,24 +581,22 @@ FLASHMEM static void spindle_ramp_task (void *data)
 
 FLASHMEM static rpm_override_t *_get_ramp (spindle_ptrs_t *spindle)
 {
-    static rpm_override_t rampd;
+    static rpm_override_t rampd = {0};
+
+    if(rampd.spindle == spindle)
+        return &rampd;
 
     rpm_override_t *ramp = &rampd;
 
     if(ramp->spindle == NULL)
         ramp->spindle = spindle;
     else {
-        while(ramp->next && (ramp = ramp->next));
-        if((ramp->next = calloc(1, sizeof(rpm_override_t))))
-            ramp->next->spindle = spindle;
-    }
+        while(ramp->next && ramp->next->spindle != spindle && (ramp = ramp->next));
 
-    if(rampd.spindle == spindle)
-        ramp = &rampd;
-    else {
-        rpm_override_t *ramp = rampd.next;
-        while(ramp && ramp->spindle != spindle)
-            ramp = ramp->next;
+        if(ramp->next == NULL && (ramp->next = calloc(1, sizeof(rpm_override_t))))
+            ramp->next->spindle = spindle;
+
+        ramp = ramp->next;
     }
 
     return ramp;

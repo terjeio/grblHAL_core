@@ -23,6 +23,7 @@
 #define _PROBE_H_
 
 #include "crossbar.h"
+#include "stream.h"
 
 #define N_PROBE_MAX 3
 
@@ -40,16 +41,6 @@ typedef enum {
     Probe_Toolsetter,  //!< 1
     Probe_2            //!< 2
 } probe_id_t;
-
-typedef union {
-    uint8_t flags;
-    struct {
-        uint8_t probe_triggered      :1,
-                toolsetter_triggered :1,
-                probe2_triggered     :1,
-                aquired              :1;
-    };
-} probe_states_t;
 
 typedef union {
     uint16_t value;

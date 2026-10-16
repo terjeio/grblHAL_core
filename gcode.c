@@ -927,7 +927,7 @@ FLASHMEM static tool_data_t *tool_get_pending (tool_id_t tool_id, char **message
         tool_table_entry_t *tool = grbl.tool_table.get_tool(tool_id);
 
         if(message && tool->name) {
-            if((*message = malloc(strlen(tool->name) + 1)))
+            if((*message = realloc(*message, strlen(tool->name) + 1)))
                 strcpy(*message, tool->name);
         }
 
@@ -1076,15 +1076,16 @@ FLASHMEM static status_code_t init_sync_motion (plan_line_data_t *pl_data, float
 }
 
 // Output and free previously allocated message
-FLASHMEM void gc_output_message (char *message)
+// NOTE: parameter is void* to match foreground task signature.
+FLASHMEM void gc_output_message (void *message)
 {
     if(message) {
 
         if(grbl.on_gcode_message)
-            grbl.on_gcode_message(message);
+            grbl.on_gcode_message((char *)message);
 
-        if(*message)
-            report_message(message, Message_Plain);
+        if(*(char *)message)
+            report_message((char *)message, Message_Plain);
 
         free(message);
     }
@@ -1226,6 +1227,18 @@ status_code_t gc_execute_block (char *block)
         .o = On,
     };
 
+    PROGMEM static const parameter_words_t g76_words = {
+        .e = On,
+        .h = On,
+        .i = On,
+        .j = On,
+        .k = On,
+        .l = On,
+        .p = On,
+        .q = On,
+        .r = On
+    };
+
     PROGMEM static const modal_groups_t jog_groups = {
         .G0 = On,
         .G3 = On,
@@ -1339,6 +1352,11 @@ status_code_t gc_execute_block (char *block)
 
     if(*block != 'N' && hal.stream.file && grbl.on_line_number_assigned)
         gc_block.values.n = (int32_t)grbl.on_line_number_assigned((line_number_t)0);
+
+    if(message && gc_parser_flags.check_mode) {
+        free(message);
+        message = NULL;
+    }
 
     if(*block == '\0') {
 
@@ -1475,8 +1493,10 @@ status_code_t gc_execute_block (char *block)
 
         if(letter == 'O') {
             value = NAN;
-            if((status = read_uint(block, &char_counter, &int_value)) != Status_OK)
+            uint32_t value;
+            if((status = read_uint(block, &char_counter, &value)) != Status_OK)
                 RETURN(status);
+            int_value = (int32_t)value;
         } else if(!read_float(block, &char_counter, &value)) {
             if(user_mcode == UserMCode_NoValueWords)    // Valueless parameters allowed for user defined M-codes.
                 value = NAN;                            // Parameter validation deferred to implementation.
@@ -2383,7 +2403,7 @@ status_code_t gc_execute_block (char *block)
     if(gc_block.words.s && gc_block.values.s < 0.0f)
         RETURN(Status_NegativeValue); // [Word value cannot be negative]
 
-    // [1. Comments ]: MSG's may be supported by driver layer. Comment handling performed by protocol.
+    // [1. Comments ]: MSG's may be supported by driver layer.
 
     // [2. Set feed rate mode ]: G93 F word missing with G1,G2/3 active, implicitly or explicitly.
     // Feed rate is not defined after switching between G93, G94 and G95.
@@ -2837,7 +2857,7 @@ status_code_t gc_execute_block (char *block)
     } while(idx);
 
     if(gc_block.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
-        gc_block.values.xyz[X_AXIS] /= 2.0f;
+        gc_block.values.xyz[X_AXIS] *= 0.5f;
 
     // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED. Error, if enabled while G53 is active.
     // [G40 Errors]: G2/3 arc is programmed after a G40. The linear move after disabling is less than tool diameter.
@@ -3430,15 +3450,16 @@ status_code_t gc_execute_block (char *block)
                 thread.depth = gc_block.values.ijk[K_VALUE];
 
                 if(gc_block.modal.units_imperial) {
+                    thread.pitch *= MM_PER_INCH;
                     thread.peak *= MM_PER_INCH;
                     thread.initial_depth *= MM_PER_INCH;
                     thread.depth *= MM_PER_INCH;
                 }
 
                 if(gc_block.modal.diameter_mode) {
-                    thread.peak /= 2.0f;
-                    thread.initial_depth /= 2.0f;
-                    thread.depth /= 2.0f;
+                    thread.peak *= 0.5f;
+                    thread.initial_depth *= 0.5f;
+                    thread.depth *= 0.5f;
                 }
 
                 //scaling?
@@ -3456,7 +3477,7 @@ status_code_t gc_execute_block (char *block)
                     thread.end_taper_type = (gc_taper_type)gc_block.values.l;
 
                 if(gc_block.words.e)
-                    thread.end_taper_length = gc_block.values.e;
+                    thread.end_taper_length = gc_block.values.e * (gc_block.modal.units_imperial ? MM_PER_INCH : 1.0f);
 
                 if(thread.end_taper_length <= 0.0f || thread.end_taper_type == Taper_None) {
                     thread.end_taper_length = 0.0f;
@@ -3464,7 +3485,7 @@ status_code_t gc_execute_block (char *block)
                     // TODO: fail?
                 }
 
-                if(thread.end_taper_type != Taper_None && thread.end_taper_length > fabsf(thread.z_final - gc_state.position[Z_AXIS]) / 2.0f)
+                if(thread.end_taper_type != Taper_None && thread.end_taper_length > fabsf(thread.z_final - gc_state.position[Z_AXIS]) * 0.5f)
                     RETURN(Status_GcodeValueOutOfRange);
 
                 if(gc_block.words.r)
@@ -3476,7 +3497,7 @@ status_code_t gc_execute_block (char *block)
                 // Ensure spindle speed is at 100% - any override will be disabled on execute.
                 gc_parser_flags.spindle_force_sync = On;
 
-                gc_block.words.e = gc_block.words.h = gc_block.words.i = gc_block.words.j = gc_block.words.k = gc_block.words.l = gc_block.words.p = gc_block.words.q = gc_block.words.r = Off;
+                gc_block.words.mask &= ~g76_words.mask;
 
             } else if(gc_block.values.f == 0.0f)
                 RETURN(Status_GcodeUndefinedFeedRate); // [Feed rate undefined]
@@ -4099,8 +4120,8 @@ status_code_t gc_execute_block (char *block)
     plan_data.line_number = gc_state.line_number = (line_number_t)gc_block.values.n; // Record data for planner use.
 
     // [1. Comments feedback ]: Extracted in protocol.c if HAL entry point provided
-    if(message && !gc_parser_flags.check_mode && (plan_data.message = malloc(strlen(message) + 1)))
-        strcpy(plan_data.message, message);
+    plan_data.message = message;
+    message = NULL;
 
     // [2. Set feed rate mode ]:
     if(command_words.G5)
@@ -4224,12 +4245,15 @@ status_code_t gc_execute_block (char *block)
     // [6. Change tool ]: Delegated to (possible) driver implementation
     if(command_words.M6 && gc_block.tool_action == ToolAction_Change && !gc_parser_flags.check_mode) {
 
-        pending_tool = tool_get_pending(gc_state.tool_pending, plan_data.message ? NULL : &plan_data.message);
+        pending_tool = tool_get_pending(gc_state.tool_pending, &plan_data.message);
 
         protocol_buffer_synchronize();
 
         if(plan_data.message) {
-            gc_output_message(plan_data.message);
+            if(gc_parser_flags.check_mode)
+                free(message);
+            else
+                gc_output_message(plan_data.message);
             plan_data.message = NULL;
         }
 

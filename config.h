@@ -32,6 +32,13 @@ specific needs, i.e. performance tuning or adjusting to non-typical machines.
 #ifndef _GRBL_CONFIG_H_
 #define _GRBL_CONFIG_H_
 
+#ifndef Off
+#define Off 0
+#endif
+#ifndef On
+#define On 1
+#endif
+
 // Compile time only default configuration
 
 /*! \def N_AXIS

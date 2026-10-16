@@ -78,7 +78,6 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "probe.h"
 #include "vfs.h"
 
 typedef enum {
@@ -195,6 +194,16 @@ typedef union {
                  all            :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
     };
 } report_tracking_flags_t;
+
+typedef union {
+    uint8_t flags;
+    struct {
+        uint8_t probe_triggered      :1,
+                toolsetter_triggered :1,
+                probe2_triggered     :1,
+                aquired              :1;
+    };
+} probe_states_t;
 
 typedef struct {
     report_tracking_flags_t flags;

@@ -33,8 +33,12 @@
 #define true 1
 #endif
 
+#ifndef Off
 #define Off 0
+#endif
+#ifndef On
 #define On 1
+#endif
 
 #define SOME_LARGE_VALUE 1.0E+38f
 #ifndef M_PI

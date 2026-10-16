@@ -722,7 +722,7 @@ FLASHMEM static uint32_t get_axis_mask (setting_id_t id)
 
         case Setting_InvertStepperEnable:
 #if COMPATIBILITY_LEVEL > 2
-            value = !!settings.steppers.enable_invert.mask;
+            value = !settings.steppers.enable_invert.mask;
 #else
             value = settings.steppers.enable_invert.mask;
 #endif

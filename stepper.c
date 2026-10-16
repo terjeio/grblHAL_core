@@ -178,7 +178,7 @@ static status_code_t jlog_out (sys_state_t state, char *args)
 
 #endif
 
-extern void gc_output_message (char *message);
+extern void gc_output_message (void *message);
 
 /*    BLOCK VELOCITY PROFILE DEFINITION
           __________________________
@@ -529,7 +529,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
                 // Enqueue any message to be printed (by foreground process)
                 if(st.exec_block->message) {
-                    task_add_immediate((foreground_task_ptr)gc_output_message, st.exec_block->message);
+                    task_add_immediate(gc_output_message, st.exec_block->message);
                     st.exec_block->message = NULL;
                 }
 
