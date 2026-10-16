@@ -43,6 +43,16 @@ typedef enum {
 } probe_id_t;
 
 typedef union {
+    uint8_t flags;
+    struct {
+        uint8_t probe_triggered      :1,
+                toolsetter_triggered :1,
+                probe2_triggered     :1,
+                aquired              :1;
+    };
+} probe_states_t;
+
+typedef union {
     uint16_t value;
     struct {
         uint16_t triggered     :1, //!< Set to true when probe or toolsetter is triggered.
