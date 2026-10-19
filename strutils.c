@@ -390,16 +390,18 @@ FLASHMEM char *strset (string_t *string, size_t len, const char *s)
 
     if(len > string->len) {
         char *tmp;
-        if((tmp = realloc(string->base->data && string->data == string->base->data ? NULL :string->data, len + 1)))
+        if((tmp = realloc(string->base->data && string->base->data == string->data ? NULL : string->data, len + 1))) {
             string->len = len;
-        else if(string->data) {
-            if(string->base == NULL || string->data != string->base->data)
-                free(string->data);
-            if(string->base)
+            string->data = tmp;
+        } /* else if(string->data) {
+            if(!string->base || string->data != string->base->data)
+                free(string->data); // TODO: try allocating again since a larger fragment may be available after free()?
+            if(string->base) {
                 string->data = string->base->data;
-            string->len = string->base ? string->base->len : 0;
-        }
-        string->data = tmp;
+                string->len = string->base->len;
+            } else
+                string->len = 0;
+        } */
     }
 
     if(string->len < len)
