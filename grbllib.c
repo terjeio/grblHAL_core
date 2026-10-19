@@ -321,10 +321,6 @@ FLASHMEM int grbl_enter (void)
     hal.stream.suspend_read = NULL;
 #endif
 
-#ifdef NO_SAFETY_DOOR_SUPPORT
-    hal.signals_cap.safety_door_ajar = Off;
-#endif
-
 #if COREXY
     extern void corexy_init (void);
     corexy_init();

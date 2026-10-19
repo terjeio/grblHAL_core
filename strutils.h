@@ -39,6 +39,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "platform.h"
 
+struct string_
+{
+    size_t len;
+    union {
+        char *data;
+        char *content;
+        char *name;
+    };
+    struct string_ *base;
+};
+
+typedef struct string_ string_t;
+
 char *stristr(const char *s1, const char *s2);
 char *strnistr (const char *s1, const char *s2, size_t len);
 char *strappend (char *buf, int argc, ...);
@@ -48,9 +61,10 @@ int32_t strlookup (const char *s1, const char *s2, const char delimiter);
 bool strtotime (char *s, struct tm *time);
 char *strtoisodt (struct tm *dt);
 char *strtointernetdt (struct tm *dt);
+char *strset (string_t *string, size_t len, const char *s);
 char *btoa (uint64_t bytes);
 #if defined(_WIN32) || defined(__MSP432P401R__) || defined(PART_TM4C123GH6PM)
 size_t strlcpy (char *dst, const char *src, size_t len);
 #endif
 
-#endif
+#endif // __STRUTILS_H__

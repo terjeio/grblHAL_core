@@ -1591,7 +1591,7 @@ FLASHMEM static void ioports_configure (settings_t *settings)
             if(is_aux(cfg, xbar->function)) {
                 in_config.inverted = !!(settings->ioport.invert_in.mask & (1 << port));
 #ifdef AUX_SETTINGS_PULLUP
-                in_config.pull_mode = (settings->ioport.pullup_disable_in.mask & (1 << port)) ? PullMode_None : PullMode_Up;
+                in_config.pull_mode = (settings->ioport.pullup_disable_in.mask & (1 << port)) ? PullMode_Down : PullMode_Up;
 #else
                 in_config.pull_mode = (pull_mode_t)xbar->mode.pull_mode;
 #endif

@@ -33,6 +33,7 @@
 #include "ngc_expr.h"
 #include "ngc_params.h"
 #include "ngc_flowctrl.h"
+#include "strutils.h"
 #include "stream_file.h"
 //#include "string_registers.h"
 
@@ -686,10 +687,9 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                         char *subname;
                         if((subname = ngc_string_param_get((ngc_string_id_t)o_label))) {
                             char _name[50];
-                            size_t len;
-                            vfs_path_t macro = { .name = _name, .len = sizeof(_name) - 1 };
+                            string_t macrob = { .name = _name, .len = sizeof(_name) - 1 }, macro = { .base = &macrob };
 
-                            if((len = strlen(subname) + 8) > macro.len && (macro.name = malloc(len + 1)) == NULL)
+                            if(!strset(&macro, strlen(subname) + 8, subname))
                                 status = Status_FlowControlOutOfMemory;
 
                             if(status == Status_OK) {
@@ -697,7 +697,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                                 const char *path;
                                 vfs_file_t *file = NULL;
 
-                                if((path = vfs_locate_file(strcat(strcpy(macro.name, subname), ".macro"))))
+                                if((path = vfs_locate_file(strcat(macro.name, ".macro"))))
                                     file = stream_redirect_read(path, onNamedSubError, onNamedSubEOF);
 
                                 if(macro.name != _name)

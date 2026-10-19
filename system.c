@@ -113,7 +113,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
             if(state_get() != STATE_ESTOP)
                 mc_reset();
         } else {
-#ifndef NO_SAFETY_DOOR_SUPPORT
+
             if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
                 sys.flags.is_parking = false;
                 if(settings.safety_door.flags.ignore_when_idle) {
@@ -127,7 +127,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 } else
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
-#endif
+
             if(signals.probe_overtravel || signals.tls_overtravel) {
                 event_signals.probe_overtravel = On;
                 event_signals.tls_overtravel = signals.tls_overtravel;

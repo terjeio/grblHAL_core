@@ -26,6 +26,7 @@
 #include <errno.h>
 
 #include "hal.h"
+#include "strutils.h"
 #include "vfs.h"
 
 #ifdef ARDUINO_SAM_DUE
@@ -231,10 +232,12 @@ static vfs_mount_t root = {
 };
 static vfs_mount_t *cwdmount = &root;
 static char _cwd[101] = "/";
-static vfs_path_t cwd = { .name = _cwd, .len = sizeof(_cwd) - 1 };
+static string_t cwdb = { .name = _cwd, .len = sizeof(_cwd) - 1 }, cwd = { .base = &cwdb };
 
 volatile int vfs_errno = 0;
 vfs_events_t vfs = {0};
+
+static int _vfs_stat (vfs_mount_t *mount, const char *filename, vfs_stat_t *st);
 
 FLASHMEM static vfs_mount_t *get_rootfs (void)
 {
@@ -251,46 +254,43 @@ FLASHMEM char *vfs_fixpath (char *path)
     return path;
 }
 
+// NOTE: only call once from public call
 FLASHMEM static const char *parse_path (const char *path)
 {
-    static vfs_path_t abspath = {0};
+    static string_t abspath = {0};
 
-    if(strlen(cwd.name) + strlen(path) + 1 > abspath.len) {
-        abspath.len = max(50, strlen(cwd.name)) + strlen(path) + 1;
-        abspath.name = realloc(abspath.name, abspath.len);
-    }
+    char *fullpath;
 
-    if(abspath.name) {
+    if((fullpath = strset(&abspath, strlen(cwd.name) + strlen(path) + 1, *path == '/' ? "/" : cwd.name))) {
 
         char *newpath;
 
         if((newpath = malloc(strlen(path) + 1))) {
 
             strcpy(newpath, path);
-            strcpy(abspath.name, *path == '/' ? "/" : cwd.name);
+            strcpy(fullpath, *path == '/' ? "/" : cwd.name);
 
             char *p, *el = strtok(newpath, "/");
 
             while(el) {
                 if(!strcmp("..", el)) {
-                    if((p = strrchr(abspath.name, '/')))
-                        *(p + (p == abspath.name ? 1 : 0)) = '\0';
+                    if((p = strrchr(fullpath, '/')))
+                        *(p + (p == fullpath ? 1 : 0)) = '\0';
                 } else if(*el && strcmp(el, ".")) {
-                    if(strlen(abspath.name) == 1)
-                        strcat(abspath.name, el);
+                    if(strlen(fullpath) == 1)
+                        strcat(fullpath, el);
                     else
-                        strcat(strcat(abspath.name, "/"), el);
+                        strcat(strcat(fullpath, "/"), el);
                 }
                 el = strtok(NULL, "/");
             }
 
             free(newpath);
         } else
-            strcpy(abspath.name, path);
-    } else
-        abspath.len = 0;
+            strcpy(fullpath, path);
+    }
 
-    return abspath.name ? (const char *)abspath.name : path;
+    return fullpath ? (const char *)fullpath : path;
 }
 
 FLASHMEM static vfs_mount_t *get_mount (const char *path)
@@ -329,7 +329,7 @@ FLASHMEM static const char *get_filename (vfs_mount_t *mount, const char *filena
 
 FLASHMEM static vfs_mount_t *mount_modifiable (const char *path, size_t op_fn)
 {
-    vfs_mount_t *mount = get_mount((path = parse_path(path)));
+    vfs_mount_t *mount = get_mount(path);
 
     if(mount == NULL || mount->mode.hidden)
         vfs_errno = EFAULT;
@@ -449,7 +449,7 @@ FLASHMEM int vfs_unlink (const char *filename)
     int ret = -1;
     vfs_mount_t *mount; // TODO: test for dir?
 
-    if((mount = mount_modifiable(filename, offsetof(vfs_t, funlink)))) {
+    if((mount = mount_modifiable((filename = parse_path(filename)), offsetof(vfs_t, funlink)))) {
         if((ret = mount->vfs->funlink(get_filename(mount, filename))) != -1 && vfs.on_fs_changed)
             vfs.on_fs_changed(mount->vfs);
     }
@@ -462,7 +462,7 @@ FLASHMEM int vfs_mkdir (const char *path)
     int ret = -1;
     vfs_mount_t *mount;
 
-    if((mount = mount_modifiable(path, offsetof(vfs_t, fmkdir)))) {
+    if((mount = mount_modifiable((path = parse_path(path)), offsetof(vfs_t, fmkdir)))) {
         if((ret = mount->vfs->fmkdir(get_filename(mount, path))) != -1 && vfs.on_fs_changed)
             vfs.on_fs_changed(mount->vfs);
     }
@@ -475,11 +475,11 @@ FLASHMEM int vfs_rmdir (const char *path)
     int ret = -1;
     vfs_mount_t *mount;
 
-    if((mount = mount_modifiable(path, offsetof(vfs_t, frmdir)))) {
+    if((mount = mount_modifiable((path = parse_path(path)), offsetof(vfs_t, frmdir)))) {
 
         vfs_stat_t st;
 
-        if(vfs_stat(path, &st) == 0 && !st.st_mode.directory)
+        if(_vfs_stat(mount, path, &st) == 0 && !st.st_mode.directory)
             vfs_errno = ENOTDIR;
         else if((ret = mount->vfs->frmdir(get_filename(mount, path))) != -1 && vfs.on_fs_changed)
             vfs.on_fs_changed(mount->vfs);
@@ -494,9 +494,8 @@ FLASHMEM int vfs_chdir (const char *path)
     vfs_mount_t *mount;
 
     vfs_errno = 0;
-    path = parse_path(path);
 
-    if((mount = get_mount(path))) {
+    if((mount = get_mount((path = parse_path(path))))) {
         if(mount->vfs->fchdir)
             ret = mount->vfs->fchdir(get_filename(mount, path));
         else {
@@ -507,20 +506,13 @@ FLASHMEM int vfs_chdir (const char *path)
     }
 
     if(ret == 0) {
-        size_t cwdlen;
-        if((cwdlen = strlen(path)) > cwd.len) {
-            if((cwd.name = realloc(cwd.name == _cwd ? NULL : cwd.name, cwdlen + 1)))
-                cwd.len = cwdlen;
-            else {
-                cwd.name = _cwd;
-                cwd.len = sizeof(_cwd) - 1;
-                mount = &root;
-                path = root.path;
-                ret = -1;
-            }
+        if(strset(&cwd, strlen(path) + 1, path))
+            cwdmount = mount;
+        else {
+            mount = &root;
+            strcpy(cwd.name, (path = root.path));
+            ret = -1;
         }
-        strcpy(cwd.name, path);
-        cwdmount = mount;
     }
 
     return ret;
@@ -597,7 +589,7 @@ FLASHMEM void vfs_closedir (vfs_dir_t *dir)
 
 FLASHMEM char *vfs_getcwd (char *buf, size_t len)
 {
-    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : cwd.name, *cwd;
+    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : "/", *cwd;
     size_t cwdlen;
 
     vfs_errno = 0;
@@ -635,18 +627,19 @@ FLASHMEM int vfs_chmod (const char *filename, vfs_st_mode_t attr, vfs_st_mode_t 
     return mount && mount->vfs->fchmod ? mount->vfs->fchmod(get_filename(mount, filename), attr, mask) : -1;
 }
 
+FLASHMEM static int _vfs_stat (vfs_mount_t *mount, const char *filename, vfs_stat_t *st)
+{
+    return mount ? mount->vfs->fstat(get_filename(mount, filename), st) : -1;
+}
+
 FLASHMEM int vfs_stat (const char *filename, vfs_stat_t *st)
 {
-    filename = parse_path(filename);
-
-    vfs_mount_t *mount = get_mount(filename);
-
-    return mount ? mount->vfs->fstat(get_filename(mount, filename), st) : -1;
+    return _vfs_stat(get_mount((filename = parse_path(filename))), filename, st);
 }
 
 FLASHMEM int vfs_utime (const char *filename, struct tm *modified)
 {
-    vfs_mount_t *mount = get_mount(filename);
+    vfs_mount_t *mount = get_mount((filename = parse_path(filename)));
 
     return mount && mount->vfs->futime ? mount->vfs->futime(get_filename(mount, filename), modified) : -1;
 }
@@ -898,20 +891,14 @@ FLASHMEM bool vfs_mount_set_mode (const char *path, vfs_st_mode_t mode)
 FLASHMEM const char *vfs_locate_file (const char *filename)
 {
     static char _name[32];
-    static vfs_path_t path = { .name = _name, .len = sizeof(_name) - 1 };
+    static string_t pathb = { .name = _name, .len = sizeof(_name) - 1 }, path = { .base = &pathb };
 
     vfs_stat_t st;
 
     if(*filename == '/')
         return fsmounted.root && vfs_stat(filename, &st) == 0 ? filename : NULL;
 
-    size_t len;
-    if((len = strlen(filename) + 11) > path.len && (path.name = realloc(path.name == _name ? NULL : path.name, len)))
-        path.len = len;
-
-    if(path.name) {
-
-        *path.name = '\0';
+    if(strset(&path, strlen(filename) + 11, NULL)) {
 
         if(fsmounted.root) {
             strcat(strcpy(path.name, "/"), filename);
@@ -930,10 +917,6 @@ FLASHMEM const char *vfs_locate_file (const char *filename)
             if(vfs_stat(path.name, &st) != 0)
                 *path.name = '\0';
         }
-    } else {
-        path.name = _name;
-        *path.name = '\0';
-        path.len = sizeof(_name) - 1;
     }
 
     return *path.name ? (const char *)path.name : NULL;

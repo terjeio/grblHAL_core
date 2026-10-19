@@ -57,12 +57,6 @@ struct tm {
 };
 #endif // __time_t_defined
 
-typedef struct
-{
-    char *name;
-    size_t len;
-} vfs_path_t;
-
 typedef union
 {
     uint8_t mode;

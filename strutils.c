@@ -380,3 +380,37 @@ FLASHMEM char *btoa (uint64_t bytes)
 
     return buf;
 }
+
+FLASHMEM char *strset (string_t *string, size_t len, const char *s)
+{
+    if(!string->data && string->base) {
+        string->data = string->base->data;
+        string->len = string->base->len;
+    }
+
+    if(len > string->len) {
+        char *tmp;
+        if((tmp = realloc(string->data, len + 1)))
+            string->len = len;
+        else if(string->data) {
+            if(string->base == NULL || string->data != string->base->data)
+                free(string->data);
+            if(string->base)
+                string->data = string->base->data;
+            string->len = string->base ? string->base->len : 0;
+        }
+        string->data = tmp;
+    }
+
+    if(string->len < len)
+        s = NULL;
+    else {
+        if(s)
+            strcpy(string->data, s);
+        else
+            *string->data = '\0';
+        s = string->data;
+    }
+
+    return (char *)s;
+}

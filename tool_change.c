@@ -109,10 +109,8 @@ FLASHMEM static void change_completed (void)
 
     gc_state.tool_change = probe_toolsetter = false;
 
-#ifndef NO_SAFETY_DOOR_SUPPORT
 //    if(hal.control.get_state().safety_door_ajar && hal.signals_cap.safety_door_ajar)
 //        system_set_exec_state_flag(EXEC_SAFETY_DOOR);
-#endif
 }
 
 // Reset claimed HAL entry points on soft restart.

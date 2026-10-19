@@ -926,8 +926,9 @@ FLASHMEM static tool_data_t *tool_get_pending (tool_id_t tool_id, char **message
         tool_table_entry_t *tool = grbl.tool_table.get_tool(tool_id);
 
         if(message && tool->name) {
-            if((*message = realloc(*message, strlen(tool->name) + 1)))
-                strcpy(*message, tool->name);
+            char *tmp;
+            if((tmp = realloc(*message, strlen(tool->name) + 1)))
+                strcpy((*message = tmp), tool->name);
         }
 
         return tool->data;

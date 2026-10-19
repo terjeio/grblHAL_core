@@ -175,13 +175,11 @@ bool protocol_main_loop (void)
         grbl.report.feedback_message(Message_AlarmLock);
     } else {
         state_set(STATE_IDLE);
-#ifndef NO_SAFETY_DOOR_SUPPORT
         // Check if the safety door is open.
         if (hal.signals_cap.safety_door_ajar && !settings.safety_door.flags.ignore_when_idle && hal.control.get_state().safety_door_ajar) {
             system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
         }
-#endif
         if(sys.alarm_pending)
             system_raise_alarm(sys.alarm_pending);
         else {

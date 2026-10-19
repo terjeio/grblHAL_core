@@ -527,7 +527,7 @@
 #define LIMITS_OVERRIDE_ENABLE 0
 #endif
 
-#if SAFETY_DOOR_ENABLE && defined(NO_SAFETY_DOOR_SUPPORT)
+#if SAFETY_DOOR_ENABLE
 #error "Driver does not support safety door functionality!"
 #endif
 
