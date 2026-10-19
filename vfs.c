@@ -509,7 +509,7 @@ FLASHMEM int vfs_chdir (const char *path)
         if(strset(&cwd, strlen(path) + 1, path))
             cwdmount = mount;
         else {
-            mount = &root;
+            cwdmount = &root;
             strcpy(cwd.name, (path = root.path));
             ret = -1;
         }
@@ -589,13 +589,16 @@ FLASHMEM void vfs_closedir (vfs_dir_t *dir)
 
 FLASHMEM char *vfs_getcwd (char *buf, size_t len)
 {
-    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : "/", *cwd;
+    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : cwd.name, *cwd;
     size_t cwdlen;
 
     vfs_errno = 0;
 
     if((cwd = (char *)malloc(strlen(cwdmount->path) + strlen(cwds) + 3))) {
-        strcat(strcpy(cwd, cwdmount->path), cwds + 1);
+        if(cwdmount->vfs->fgetcwd)
+            strcat(strcpy(cwd, cwdmount->path), cwds + 1);
+        else
+            strcpy(cwd, cwds);
         vfs_fixpath(cwd);
         cwdlen = strlen(cwd);
         if(buf) {
