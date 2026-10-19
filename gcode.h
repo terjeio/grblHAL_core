@@ -546,9 +546,7 @@ typedef union {
                 diameter_mode        :1, //!< {G7,G8} Lathe diameter mode.
                 scaling_active       :1, //!< {G50,G51}
                 canned_cycle_active  :1,
-#if NGC_PARAMETERS_ENABLE
                 auto_restore         :1, //!< {M73} NOTE: set in snapshot when saving modal state
-#endif
                 unassigned           :2;
     };
 } gc_modal_flags_t;
@@ -586,10 +584,8 @@ typedef struct {
 //!  @name The following variables are not copied to the parsers gc_block working copy!
 //@{
     float tool_length_offset[N_AXIS];    //!< Tracks tool length offset when enabled
-#if NGC_PARAMETERS_ENABLE
     float feed_rate;                     //!< {F} NOTE: set in snapshot when saving modal state
     bool auto_restore;                   //!< {M73} NOTE: set in snapshot when saving modal state
-#endif
 } gc_modal_t;
 
 typedef struct {
@@ -669,8 +665,6 @@ typedef struct {
     point_2d_t offsets;
 } rotation_t;
 
-#if NGC_PARAMETERS_ENABLE
-
 typedef struct g66_arguments
 {
     macro_call_t call;
@@ -701,7 +695,6 @@ typedef struct {
 } lathe_cycle_arguments_t;
 
 #endif // LATHE_UVW_OPTION
-#endif // NGC_PARAMETERS_ENABLE
 
 /*! \brief Parser state
 
@@ -735,9 +728,7 @@ typedef struct {
                                     //!< machine zero in mm. Persistent and loaded from non-volatile storage
                                     //!< on boot when COMPATIBILITY_LEVEL <= 1
     tool_data_t *tool;              //!< Tracks tool number and tool offset
-#if NGC_PARAMETERS_ENABLE
     g66_arguments_t *g66_args;      //!< Linked list with G66 arguments, NULL if G66 is not active.
-#endif
 } parser_state_t;
 
 extern parser_state_t gc_state;
@@ -762,9 +753,7 @@ typedef struct {
     parameter_words_t g65_words;        //!< Parameter words to pass to G65 macro.
     macro_call_t macro_call;
     bool select_probe;                  // Set to \a true if the probe has to be selected before executing G38.x.
-#if NGC_PARAMETERS_ENABLE
     modal_state_action_t state_action;  //!< M70-M73 modal state action
-#endif
 #if N_AXIS > 3
     axes_signals_t rotary_wrap;
 #endif
@@ -879,11 +868,8 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate);
 size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file);
-
-#if NGC_PARAMETERS_ENABLE
 parameter_words_t gc_get_g65_arguments (void);
 bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot);
-#endif
 
 #if ENABLE_ACCELERATION_PROFILES
 float gc_get_accel_factor (uint8_t profile);

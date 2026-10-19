@@ -24,16 +24,13 @@
   Most additional predefined parameters defined by LinuxCNC (ref section 5.2.3.1) are implemented.
 */
 
-#include "hal.h"
-
-#if NGC_PARAMETERS_ENABLE
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
+#include "hal.h"
 #include "system.h"
 #include "settings.h"
 #include "ngc_params.h"
@@ -1416,5 +1413,3 @@ FLASHMEM void ngc_params_init (void)
 
     ngc_modal_state_invalidate();
 }
-
-#endif // NGC_PARAMETERS_ENABLE

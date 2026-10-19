@@ -29,10 +29,7 @@
 #include "motion_control.h"
 #include "protocol.h"
 #include "state_machine.h"
-
-#if NGC_PARAMETERS_ENABLE
 #include "ngc_params.h"
-#endif
 
 #if NGC_EXPRESSIONS_ENABLE
 #include "ngc_expr.h"
@@ -422,8 +419,6 @@ float gc_get_accel_factor (uint8_t profile)
 
 #endif // ENABLE_ACCELERATION_PROFILES
 
-#if NGC_PARAMETERS_ENABLE
-
 FLASHMEM static parameter_words_t macro_arguments_push (gc_values_t *values, parameter_words_t words, gc_values_t *target)
 {
     // NOTE: this array has to match the parameter_words_t order!
@@ -642,8 +637,6 @@ FLASHMEM bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
     return ok;
 }
 
-#endif // NGC_PARAMETERS_ENABLE
-
 FLASHMEM static m98_macro_t *macro_find (macro_id_t id)
 {
     m98_macro_t *sub;
@@ -709,16 +702,13 @@ FLASHMEM static status_code_t macro_add (macro_id_t id, line_number_t line_numbe
 
 FLASHMEM static status_code_t macro_call (macro_id_t macro, line_number_t line_number, parameter_words_t args, uint8_t repeats)
 {
-#if NGC_PARAMETERS_ENABLE
+    status_code_t status;
+
     ngc_set_return_value(0.0f, false);
-#endif
 
-    status_code_t status = grbl.on_macro_execute(macro, line_number, args, repeats);
-
-#if NGC_PARAMETERS_ENABLE
-    if(status != Status_Handled)
+    if((status = grbl.on_macro_execute(macro, line_number, args, repeats)) != Status_Handled)
         ngc_call_pop();
-#endif
+
     return status == Status_Unhandled ? Status_GcodeValueOutOfRange : (status == Status_Handled ? Status_OK : status);
 }
 
@@ -735,16 +725,12 @@ static status_code_t gc_at_exit (status_code_t status)
         // Clear any registered M98 macros
         macros_clear();
 
-#if NGC_PARAMETERS_ENABLE
-
         // Clear the G66 arguments stack
         while(gc_state.g66_args) {
             g66_arguments_t *args = gc_state.g66_args->prev;
             free(gc_state.g66_args);
             gc_state.g66_args = args;
         }
-
-#endif
     }
 
     return status;
@@ -849,9 +835,7 @@ FLASHMEM void gc_init (bool stop)
 #if NGC_EXPRESSIONS_ENABLE
     ngc_flowctrl_init();
 #endif
-#if NGC_PARAMETERS_ENABLE
     ngc_params_init();
-#endif
 #if ENABLE_ACCELERATION_PROFILES
     gc_state.modal.acceleration_factor = gc_get_accel_factor(0); // Initialize machine with default
 #endif
@@ -1519,12 +1503,10 @@ status_code_t gc_execute_block (char *block)
         }
         // NOTE: Rounding must be used to catch small floating point errors.
 
-#if NGC_PARAMETERS_ENABLE
         if(gc_state.g66_args && gc_state.g66_args->call == MacroCall_Modal1 && gc_state.g66_args->call_level == ngc_call_level()) {
             command_words.G16 = On;
             gc_block.macro_call = gc_state.g66_args->call;
         }
-#endif
 
         // Check if the g-code word is supported or errors due to modal group violations or has
         // been repeated in the g-code block. If ok, update the command or record its value.
@@ -1740,9 +1722,8 @@ status_code_t gc_execute_block (char *block)
 #endif
 
                     case 65:
-#if NGC_PARAMETERS_ENABLE
                     case 66:
-#endif
+
                         // NOTE: Fanuc style, not supported by LinuxCNC
                         if(command_words.mask & m_groups.mask) {
                             gc_block.words.m = On;
@@ -1756,7 +1737,6 @@ status_code_t gc_execute_block (char *block)
                             RETURN(Status_GcodeUnsupportedCommand);
                         break;
 
-#if NGC_PARAMETERS_ENABLE
                     case 67:
                         // NOTE: Fanuc style, not supported by LinuxCNC
                         if(grbl.on_macro_execute) {
@@ -1766,7 +1746,6 @@ status_code_t gc_execute_block (char *block)
                         } else
                             RETURN(Status_GcodeUnsupportedCommand);
                         break;
-#endif
 
                     case 96: case 97:
                         if(settings.mode == Mode_Lathe) {
@@ -1933,12 +1912,10 @@ status_code_t gc_execute_block (char *block)
                         port_command = (io_mcode_t)int_value;
                         break;
 
-#if NGC_PARAMETERS_ENABLE
                     case 70: case 71: case 72: case 73:
                         //word_bit.modal_group.G0 = On; ??
                         gc_block.state_action = (modal_state_action_t)int_value;
                         break;
-#endif
 
                     case 98:
                         if(mantissa != 0 || grbl.on_macro_execute == NULL)
@@ -2264,11 +2241,7 @@ status_code_t gc_execute_block (char *block)
 
     if(command_words.G16) {
 
-        if(gc_block.macro_call
-#if NGC_PARAMETERS_ENABLE
-            && gc_state.g66_args == NULL
-#endif
-        ) {
+        if(gc_block.macro_call &&( gc_block.macro_call == MacroCall_NonModal ||  gc_state.g66_args == NULL)) {
             if(!gc_block.words.p)
                 RETURN(Status_GcodeValueWordMissing); // [P word missing]
             if(gc_block.values.p > 65535.0f)
@@ -2279,8 +2252,6 @@ status_code_t gc_execute_block (char *block)
         }
 
         gc_block.words.l = gc_block.words.p = Off;
-
-#if NGC_PARAMETERS_ENABLE
 
         if(gc_block.macro_call == MacroCall_NonModal || gc_block.macro_call == MacroCall_Modal || gc_block.macro_call == MacroCall_Modal1) {
 
@@ -2319,7 +2290,6 @@ status_code_t gc_execute_block (char *block)
                     return Status_OK;
             }
         }
-#endif // NGC_PARAMETERS_ENABLE
     } else
         gc_block.words.m = Off;
 
@@ -4076,7 +4046,6 @@ status_code_t gc_execute_block (char *block)
             RETURN(macro_call((macro_id_t)gc_block.values.p, (line_number_t)gc_block.values.n, gc_block.g65_words, gc_block.values.l));
             break;
 
-#if NGC_PARAMETERS_ENABLE
         case MacroCall_End:
             if(gc_state.g66_args) {
                 g66_arguments_t *args = gc_state.g66_args->prev;
@@ -4084,7 +4053,6 @@ status_code_t gc_execute_block (char *block)
                 gc_state.g66_args = args;
             }
             break;
-#endif
 
         default:
             break;
@@ -4350,8 +4318,6 @@ status_code_t gc_execute_block (char *block)
     if(sspindle != NULL)
         gc_state.spindle = sspindle; // for now
 
-#if NGC_PARAMETERS_ENABLE
-
     // [7.1 Modal state actions ]:
     switch(gc_block.state_action) {
 
@@ -4424,8 +4390,6 @@ status_code_t gc_execute_block (char *block)
         default:
             break;
     }
-
-#endif // NGC_PARAMETERS_ENABLE
 
     // Record data for planner use.
 
@@ -4745,10 +4709,8 @@ status_code_t gc_execute_block (char *block)
 #else
                 mc_line(gc_block.values.xyz, &plan_data);
 #endif
-#if NGC_PARAMETERS_ENABLE
                 if((command_words.G16 = gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level()))
                     gc_block.macro_call = gc_state.g66_args->call;
-#endif
                 break;
 
             case MotionMode_Seek:
@@ -4762,11 +4724,9 @@ status_code_t gc_execute_block (char *block)
 #else
                 mc_line(gc_block.values.xyz, &plan_data);
 #endif
-#if NGC_PARAMETERS_ENABLE
                 // Run G66 macro?
                 if((command_words.G16 = gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level()))
                     gc_block.macro_call = gc_state.g66_args->call;
-#endif
                 break;
 
             case MotionMode_CwArc:
@@ -4845,7 +4805,7 @@ status_code_t gc_execute_block (char *block)
 
                   //  if(status != Status_GcodeUnsupportedCommand)
                         mc_override_ctrl_update(overrides);  // Wait until synchronized move is finished, then restore previous override disable status.
-#if NGC_PARAMETERS_ENABLE
+
                     if(status != Status_GcodeUnsupportedCommand) {
 
                         if(!ngc_call_push(&gc_state + ngc_call_level()))
@@ -4858,7 +4818,6 @@ status_code_t gc_execute_block (char *block)
                         g33_1_words.mask = macro_arguments_push(&gc_block.values, g33_1_words, NULL).mask;
                         RETURN(macro_call(331, (line_number_t)gc_block.values.n, g33_1_words, 1));
                     }
-#endif
                 }
                 break;
 
@@ -4985,7 +4944,6 @@ status_code_t gc_execute_block (char *block)
 
     if(command_words.G16) switch(gc_block.macro_call) {
 
-#if NGC_PARAMETERS_ENABLE
         case MacroCall_Modal:
         case MacroCall_Modal1:
             if(!ngc_call_push(&gc_state + ngc_call_level()))
@@ -4995,7 +4953,6 @@ status_code_t gc_execute_block (char *block)
 
             RETURN(macro_call((macro_id_t)gc_state.g66_args->values.p, (line_number_t)gc_block.values.n, gc_state.g66_args->words, gc_state.g66_args->values.l));
             break;
-#endif
 
         case MacroCall_NonModal98:
             if(gc_parser_flags.check_mode) {
@@ -5127,10 +5084,7 @@ status_code_t gc_execute_block (char *block)
 
             // Clear any pending output commands etc...
             gc_at_exit(hal.stream.state.m98_macro_prescan ? Status_Handled : Status_UserException);
-
-#if NGC_PARAMETERS_ENABLE
             ngc_modal_state_invalidate();
-#endif
 
             if(!gc_parser_flags.check_mode || !settings.flags.m98_prescan_enable)
                 grbl.report.feedback_message(Message_ProgramEnd);

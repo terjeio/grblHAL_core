@@ -576,8 +576,6 @@ FLASHMEM void report_tool_offsets (void)
     hal.stream.write("]" ASCII_EOL);
 }
 
-#if NGC_PARAMETERS_ENABLE
-
 // Prints NIST/LinuxCNC NGC parameter value
 FLASHMEM status_code_t report_ngc_parameter (ngc_param_id_t id)
 {
@@ -611,8 +609,6 @@ FLASHMEM status_code_t report_named_ngc_parameter (char *arg)
 
     return Status_OK;
 }
-
-#endif
 
 // Prints grblHAL NGC parameters (coordinate offsets, probing, tool table)
 FLASHMEM void report_ngc_parameters (void)
@@ -784,10 +780,8 @@ FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
 
     stream_write(gc_state.modal.units_imperial ? " G20" : " G21");
 
-#if NGC_PARAMETERS_ENABLE
     if(gc_state.g66_args)
         stream_write(" G66");
-#endif
 
     stream_write(gc_state.modal.distance_incremental ? " G91" : " G90");
 
@@ -1632,9 +1626,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
         static gc_modal_t last_state;
         static motion_mode_t motion_mode;
         static bool g92_active;
-#if NGC_PARAMETERS_ENABLE
         static bool g66_active;
-#endif
 
         spindle_t *spindle = gc_spindle_get(0);
         motion_mode_t new_mode = st_get_motion_mode();
@@ -1642,21 +1634,15 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
         gcode_mode_changed = feed_rate != gc_state.feed_rate ||
                               spindle_rpm != spindle->rpm ||
                                tool_id != gc_state.tool->tool_id ||
-                                motion_mode != new_mode
-#if NGC_PARAMETERS_ENABLE
-                                || g66_active != !!gc_state.g66_args;
-#else
-;
-#endif
+                                motion_mode != new_mode ||
+                                 g66_active != !!gc_state.g66_args;
 
         if(gcode_mode_changed) {
             feed_rate = gc_state.feed_rate;
             tool_id = gc_state.tool->tool_id;
             spindle_rpm = spindle->rpm;
             motion_mode = new_mode;
-#if NGC_PARAMETERS_ENABLE
             g66_active = !!gc_state.g66_args;
-#endif
         } else if((gcode_mode_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;
         else if(memcmp(&last_state, &gc_state.modal, sizeof(gc_modal_t))) {

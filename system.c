@@ -610,16 +610,12 @@ FLASHMEM static status_code_t output_ngc_parameters (sys_state_t state, char *ar
     status_code_t retval = Status_OK;
 
     if(args) {
-#if NGC_PARAMETERS_ENABLE
         int32_t id;
         retval = read_int(args, &id);
         if(retval == Status_OK && id >= 0)
             retval = report_ngc_parameter((ngc_param_id_t)id);
         else
             retval = report_named_ngc_parameter(args);
-#else
-        retval = Status_InvalidStatement;
-#endif
     } else
         report_ngc_parameters();
 
@@ -969,9 +965,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "J", jog, {}, { .str = "$J=<gcode> - jog machine" } },
     { "#", output_ngc_parameters, { .allow_blocking = On, .allow_redirect = On }, {
         .str = "output offsets, tool table, probing and home position"
-#if NGC_PARAMETERS_ENABLE
      ASCII_EOL "$#=<n> - output value for parameter <n>"
-#endif
     } },
     { "$", output_settings, { .allow_blocking = On }, {
         .str = "$<n> - output setting <n> value"

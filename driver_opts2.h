@@ -67,6 +67,10 @@
 #error "I2C strobe not supported!"
 #endif
 
+#if SAFETY_DOOR_ENABLE && !defined(SAFETY_DOOR_PIN)
+#error "Board does not have a safety door input!"
+#endif
+
 #define DRIVER_PROBES ((PROBE_ENABLE ? 1 : 0) + PROBE2_ENABLE + TOOLSETTER_ENABLE)
 
 #ifndef CONTROL_ENABLE

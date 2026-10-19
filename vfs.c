@@ -232,7 +232,7 @@ static vfs_mount_t root = {
 };
 static vfs_mount_t *cwdmount = &root;
 static char _cwd[101] = "/";
-static string_t cwdb = { .name = _cwd, .len = sizeof(_cwd) - 1 }, cwd = { .base = &cwdb };
+static string_t cwdb = { .name = _cwd, .len = sizeof(_cwd) - 1 }, cwd = { .name = _cwd, .len = sizeof(_cwd) - 1, .base = &cwdb };
 
 volatile int vfs_errno = 0;
 vfs_events_t vfs = {0};

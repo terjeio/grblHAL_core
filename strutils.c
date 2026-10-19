@@ -390,7 +390,7 @@ FLASHMEM char *strset (string_t *string, size_t len, const char *s)
 
     if(len > string->len) {
         char *tmp;
-        if((tmp = realloc(string->data, len + 1)))
+        if((tmp = realloc(string->base->data && string->data == string->base->data ? NULL :string->data, len + 1)))
             string->len = len;
         else if(string->data) {
             if(string->base == NULL || string->data != string->base->data)
