@@ -860,8 +860,10 @@ FLASHMEM int vfs_drive_format (vfs_drive_t *drive)
 
         int ferrno;
 
-        if(mount == cwdmount)
-            strcpy(cwd.name, "/");
+        if(mount == cwdmount) {
+            strcpy(cwd.name, mount->path);
+            vfs_fixpath(cwd.name);
+        }
 
         if(vfs.on_unmount)
             vfs.on_unmount(drive->path);
