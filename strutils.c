@@ -388,31 +388,21 @@ FLASHMEM char *strset (string_t *string, size_t len, const char *s)
         string->len = string->base->len;
     }
 
-    if(len > string->len) {
+    if(len > string->len || !string->data) {
         char *tmp;
-        if((tmp = realloc(string->base->data && string->base->data == string->data ? NULL : string->data, len + 1))) {
-            string->len = len;
-            string->data = tmp;
-        } /* else if(string->data) {
-            if(!string->base || string->data != string->base->data)
-                free(string->data); // TODO: try allocating again since a larger fragment may be available after free()?
-            if(string->base) {
-                string->data = string->base->data;
-                string->len = string->base->len;
-            } else
-                string->len = 0;
-        } */
+        bool borrowed = string->base && string->data == string->base->data;
+
+        if(!(tmp = realloc(borrowed ? NULL : string->data, len + 1)))
+            return NULL;
+
+        string->data = tmp;
+        string->len = len;
     }
 
-    if(string->len < len)
-        s = NULL;
-    else {
-        if(s)
-            strcpy(string->data, s);
-        else
-            *string->data = '\0';
-        s = string->data;
-    }
+    if(s)
+        strcpy(string->data, s);
+    else
+        *string->data = '\0';
 
-    return (char *)s;
+    return string->data;
 }
