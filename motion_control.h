@@ -60,7 +60,7 @@ status_code_t mc_rigid_tapping (plan_line_data_t *pl_data, coord_data_t *target,
 status_code_t mc_jog_execute(plan_line_data_t *pl_data, parser_block_t *gc_block, float *position);
 
 // Dwell for a specific number of seconds
-void mc_dwell(float seconds);
+bool mc_dwell(float seconds);
 
 // Perform homing cycle to locate machine zero. Requires limit switches.
 status_code_t mc_homing_cycle(axes_signals_t cycle);

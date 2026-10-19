@@ -351,7 +351,8 @@ bool protocol_main_loop (void)
         if(!protocol_execute_realtime() && sys.abort) // Runtime command check point.
             return !sys.flags.exit;                   // Bail to main() program loop to reset system.
 
-        sys.cancel = false;
+		if(sys.cancel)
+        	sys.cancel = false;
 
         // Check for sleep conditions and execute auto-park, if timeout duration elapses.
         if(settings.flags.sleep_enable)
@@ -907,6 +908,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
 
         case CMD_JOG_CANCEL:
             drop = true;
+            sys.flags.allow_pending_jog = Off;
             clear_line(&line);
             hal.stream.cancel_read_buffer();
 #ifdef KINEMATICS_API // needed when kinematics algorithm segments long jog distances (as it blocks reading from input stream)

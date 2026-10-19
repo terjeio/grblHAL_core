@@ -365,7 +365,9 @@ typedef struct spindle_param {
                 ramp_down        :1,
                 ignore_delays    :1,
                 override_disable :1,
-                restore_rpm      :1;
+                restore_rpm      :1,
+                override_pending :1,
+                unused           :2;
     } option;
     spindle_ptrs_t *hal;
 } spindle_param_t;

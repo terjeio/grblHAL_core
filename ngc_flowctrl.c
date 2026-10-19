@@ -663,12 +663,10 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
         case NGCFlowCtrl_EndSub:
             if(hal.stream.file) {
                 if(!skip_sub) {
+                    status_code_t status = ngc_eval_expression(line, pos, &value);
+
                     stack_unwind_sub(o_label, true);
-                    if(ngc_eval_expression(line, pos, &value) == Status_OK) {
-                        ngc_named_param_set("_value", value);
-                        ngc_named_param_set("_value_returned", 1.0f);
-                    } else
-                        ngc_named_param_set("_value_returned", 0.0f);
+                    ngc_set_return_value(value, status == Status_OK);
                 }
                 skip_sub = false;
             } else
@@ -748,8 +746,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                             }
 
                             if(status == Status_OK) {
-                                ngc_named_param_set("_value", 0.0f);
-                                ngc_named_param_set("_value_returned", 0.0f);
+                                ngc_set_return_value(0.0f, false);
                                 stream_reposition(sub->file, sub->file_pos, sub->line_number);
                             }
                         }
@@ -769,17 +766,14 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                 if(!skipping) {
 
                     bool g65_return = false;
+                    status_code_t status = ngc_eval_expression(line, pos, &value);
 
                     if(exec_sub)
                         stack_unwind_sub(o_label, true);
                     else if((g65_return = !!grbl.on_macro_return))
                         ngc_flowctrl_unwind_stack(stack[stack_idx].file);
 
-                    if(ngc_eval_expression(line, pos, &value) == Status_OK) {
-                        ngc_named_param_set("_value", value);
-                        ngc_named_param_set("_value_returned", 1.0f);
-                    } else
-                        ngc_named_param_set("_value_returned", 0.0f);
+                    ngc_set_return_value(value, status == Status_OK);
 
                     if(g65_return)
                         grbl.on_macro_return();

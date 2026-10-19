@@ -486,13 +486,13 @@ FLASHMEM void report_grbl_settings (bool all, void *data)
     uint_fast16_t idx, n_settings = 0;
     const setting_detail_t *setting;
     setting_detail_t **all_settings, **psetting;
-    setting_details_t *details = settings_get_details();
+    setting_details_t *details = settings_get_details(), *core_settings = details;
 
     do {
         n_settings += details->n_settings;
     } while((details = details->next));
 
-    details = settings_get_details();
+    details = core_settings;
 
     if((all_settings = psetting = calloc(n_settings, sizeof(setting_detail_t *)))) {
 
@@ -528,9 +528,14 @@ FLASHMEM void report_grbl_settings (bool all, void *data)
         free(all_settings);
 
     } else do {
-        for(idx = 0; idx < details->n_settings; idx++)
-            settings_iterator(&details->settings[idx], print_setting, data);
-    } while((details = details->next));
+        for(idx = 0; idx < details->n_settings; idx++) {
+            setting = &details->settings[idx];
+            if(!setting->flags.hidden &&
+                (all || (details == core_settings && (setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn))) &&
+                  is_setting_available(setting))
+                settings_iterator(setting, print_setting, data);
+        }
+    } while(all && (details = details->next));
 }
 
 

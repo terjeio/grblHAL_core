@@ -710,8 +710,7 @@ FLASHMEM static status_code_t macro_add (macro_id_t id, line_number_t line_numbe
 FLASHMEM static status_code_t macro_call (macro_id_t macro, line_number_t line_number, parameter_words_t args, uint8_t repeats)
 {
 #if NGC_PARAMETERS_ENABLE
-    ngc_named_param_set("_value", 0.0f);
-    ngc_named_param_set("_value_returned", 0.0f);
+    ngc_set_return_value(0.0f, false);
 #endif
 
     status_code_t status = grbl.on_macro_execute(macro, line_number, args, repeats);
@@ -4045,7 +4044,7 @@ status_code_t gc_execute_block (char *block)
         if((status_code_t)(int_value = (uint_fast16_t)mc_jog_execute(&plan_data, &gc_block, gc_state.position)) == Status_OK)
             memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_state.position));
 
-        RETURN((status_code_t)int_value);
+        RETURN((status_code_t)int_value == Status_Unhandled ? Status_OK : (status_code_t)int_value);
     }
 
 //    bool gc_parser_flags.check_mode = state_get() == STATE_CHECK_MODE;

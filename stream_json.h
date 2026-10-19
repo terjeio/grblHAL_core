@@ -30,6 +30,7 @@ typedef bool (*json_callback_ptr)(char *tag, char *value, bool is_string, void *
 
 json_out_t *json_start (vfs_file_t *file, uint32_t max_levels);
 bool json_end (json_out_t *json);
+bool json_close (json_out_t *json);
 bool json_start_object (json_out_t *json);
 bool json_start_tagged_object (json_out_t *json, const char *tag);
 bool json_end_object (json_out_t *json);

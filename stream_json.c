@@ -55,6 +55,17 @@ bool json_end (json_out_t *json)
     return json != NULL;
 }
 
+bool json_close (json_out_t *json)
+{
+    if(json) {
+        vfs_file_t *file = json->file;
+        json_end(json);
+        vfs_close(file);
+    }
+
+    return json != NULL;
+}
+
 static bool add_tag (json_out_t *json, const char *tag)
 {
     bool ok;
@@ -225,7 +236,7 @@ bool json_add_int (json_out_t *json, const char *tag, int32_t value)
     bool ok;
 
     if((ok = add_tag(json, tag))) {
-        char *v = uitoa((uint32_t)(value < 0 ? -value : value));
+        char *v = uitoa(value < 0 ? 0U - (uint32_t)value : (uint32_t)value);
         if(value < 0)
             vfs_write("-", 1, 1, json->file);
         vfs_puts(v, json->file);

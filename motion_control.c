@@ -173,7 +173,7 @@ status_code_t mc_line (float *target, plan_line_data_t *pl_data)
 
         // If the buffer is full: good! That means we are well ahead of the robot.
         // Remain in this loop until there is room in the buffer.
-         do {
+        do {
             if(!protocol_execute_realtime())    // Check for any run-time commands
                 return Status_Aborted;          // Bail, if system abort.
             if(plan_check_full_buffer())
@@ -181,6 +181,9 @@ status_code_t mc_line (float *target, plan_line_data_t *pl_data)
             else
                 break;
         } while(true);
+
+        if(pl_data->condition.jog_motion && !sys.flags.allow_pending_jog)
+            return Status_Unhandled;
 
         // Plan and queue motion into planner buffer.
         // While in M3 laser mode also set spindle state and force a buffer sync
@@ -593,8 +596,8 @@ FLASHMEM bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_da
                 pl_data->spindle.state.ccw = !pl_data->spindle.state.ccw;
             }
 
-            if(canned->dwell > 0.0f)
-                mc_dwell(canned->dwell);
+            if(canned->dwell > 0.0f && !mc_dwell(canned->dwell))
+                return false;
 
             if(canned->spindle_off)
                 pl_data->spindle.hal->set_state(pl_data->spindle.hal, (spindle_state_t){0}, 0.0f);
@@ -795,6 +798,8 @@ FLASHMEM __attribute__((weak))  status_code_t mc_rigid_tapping (plan_line_data_t
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.
 FLASHMEM status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_block, float *position)
 {
+    bool ok;
+
     // Initialize planner data struct for jogging motions.
     // NOTE: Spindle and coolant are allowed to fully function with overrides during a jog.
     pl_data->feed_rate = gc_block->values.f;
@@ -809,28 +814,28 @@ FLASHMEM status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t
     else if(sys.soft_limits.mask && !grbl.check_travel_limits(gc_block->values.xyz, sys.soft_limits, true, &sys.work_envelope))
         return Status_TravelExceeded;
 
+    sys.flags.allow_pending_jog = On;
+
     // Valid jog command. Plan, set state, and execute.
-    mc_line(gc_block->values.xyz, pl_data);
+    if((ok = mc_line(gc_block->values.xyz, pl_data) == Status_Handled)) {
 
 #ifndef KINEMATICS_API // kinematics may segment long jog moves triggering auto start (RUN)...
-    sys_state_t state = state_get();
-    if ((state == STATE_IDLE || state == STATE_TOOL_CHANGE) && plan_get_current_block() != NULL) { // Check if there is a block to execute.
-        state_set(STATE_JOG);
-        st_prep_buffer();
-        st_wake_up();  // NOTE: Manual start. No state machine required.
-    }
+        sys_state_t state = state_get();
+        if ((state == STATE_IDLE || state == STATE_TOOL_CHANGE) && plan_get_current_block() != NULL) { // Check if there is a block to execute.
+            state_set(STATE_JOG);
+            st_prep_buffer();
+            st_wake_up();  // NOTE: Manual start. No state machine required.
+        }
 #endif
+    }
 
-    return Status_OK;
+    return ok && sys.flags.allow_pending_jog ? Status_OK : Status_Unhandled;
 }
 
 // Execute dwell in seconds.
-FLASHMEM void mc_dwell (float seconds)
+FLASHMEM bool mc_dwell (float seconds)
 {
-    if (state_get() != STATE_CHECK_MODE) {
-        protocol_buffer_synchronize();
-        delay_sec(seconds, DelayMode_Dwell);
-    }
+    return state_get() == STATE_CHECK_MODE || (protocol_buffer_synchronize() && delay_sec(seconds, DelayMode_Dwell));
 }
 
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.

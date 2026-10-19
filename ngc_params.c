@@ -100,7 +100,6 @@ static ngc_rw_param_t *rw_params = NULL;
 static ngc_named_rw_param_t *rw_global_params = NULL;
 static ngc_string_id_t ref_id = (uint32_t)-1;
 static ngc_string_param_t *ngc_string_params = NULL;
-static ngc_virtual_param_t *ngc_virtual_params = NULL;
 static on_macro_execute_ptr on_macro_execute;
 
 PROGMEM static const uint8_t axis_map[] = {
@@ -143,6 +142,36 @@ PROGMEM static const uint8_t axis_map[] = {
     255
 #endif
 };
+
+// -- return value handling ---
+
+static float _value = 0.0f, _value_returned = 0.0f;
+
+FLASHMEM static float _get_value (void)
+{
+    return _value;
+}
+
+FLASHMEM static void _set_value (float value)
+{
+    _value = value;
+}
+
+FLASHMEM static float _get_value_returned (void)
+{
+    return _value_returned;
+}
+
+FLASHMEM static void _set_value_returned (float value)
+{
+    _value_returned = value;
+}
+
+//
+
+static ngc_virtual_param_t _rvs = { .name = "_value_returned", .get = _get_value_returned, .set = _set_value_returned },
+                           _rv = { .name = "_value", .get = _get_value, .set = _set_value, .next = &_rvs },
+                           *ngc_virtual_params = &_rv;
 
 #if N_AXIS > 3
 
@@ -890,6 +919,14 @@ FLASHMEM bool ngc_named_param_set (char *name, float value)
     return ok;
 }
 
+FLASHMEM bool ngc_set_return_value (float value, bool success)
+{
+    _value = success ? value : 0.0f;
+    _value_returned = (float)success;
+
+    return success;
+}
+
 FLASHMEM static bool _virtual_param_add (const char *name, ngc_named_param_get_ptr get_value, ngc_named_param_set_ptr set_value)
 {
     ngc_virtual_param_t *vp = NULL, *add;
@@ -920,6 +957,8 @@ FLASHMEM bool ngc_virtual_ro_param_add (const char *name, ngc_named_param_get_pt
 {
     return _virtual_param_add(name, get_value, NULL);
 }
+
+// -- String parameters ---
 
 FLASHMEM static ngc_string_param_t *sp_get_by_name (char *name)
 {
@@ -1177,13 +1216,10 @@ FLASHMEM static status_code_t macro_set_get_setting (parameter_words_t args)
         }
 
         if(status == Status_OK) {
-            if(setting->datatype == Format_Decimal) {
-                ngc_named_param_set("_value", setting_get_float_value(setting, offset));
-                ngc_named_param_set("_value_returned", 1.0f);
-            } else if(is_numeric) {
-                ngc_named_param_set("_value", (float)setting_get_int_value(setting, offset));
-                ngc_named_param_set("_value_returned", 1.0f);
-            }
+            if(setting->datatype == Format_Decimal)
+                ngc_set_return_value(setting_get_float_value(setting, offset), true);
+            else if(is_numeric)
+                ngc_set_return_value((float)setting_get_int_value(setting, offset), true);
         }
     } else
         status = Status_GcodeValueOutOfRange;
@@ -1206,10 +1242,8 @@ FLASHMEM static status_code_t macro_ngc_parameter_rw (parameter_words_t args)
             if(args.s) {
                 if(!(ngc_param_get(19 /* S word */, &idx) && ngc_param_set((ngc_param_id_t)idx, value)))
                     status = Status_GcodeValueOutOfRange;
-            } else {
-                ngc_named_param_set("_value", value);
-                ngc_named_param_set("_value_returned", 1.0f);
-            }
+            } else
+                ngc_set_return_value(value, true);
         } else
             status = Status_GcodeValueOutOfRange;
     } else
@@ -1220,8 +1254,7 @@ FLASHMEM static status_code_t macro_ngc_parameter_rw (parameter_words_t args)
 
 FLASHMEM static status_code_t macro_get_machine_state (parameter_words_t args)
 {
-    ngc_named_param_set("_value", (float)ffs(state_get()));
-    ngc_named_param_set("_value_returned", 1.0f);
+    ngc_set_return_value((float)ffs(state_get()), true);
 
     return Status_OK;
 }

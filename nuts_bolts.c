@@ -217,8 +217,10 @@ status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t 
             if(!isdecimal) {
                 if((c != 0 || intval))
                     ndigit++;
-                if((ndigit <= 9 || c <= 5) && intval <= 429496729)
-                    intval = (((intval << 2) + intval) << 1) + c; // intval * 10 + c
+                if(ndigit <= 9)
+                    intval = intval * 10 + c;
+                else if(intval <= (UINT32_MAX / 10) && UINT32_MAX - (intval *= 10) >= c)
+                    intval += c;
                 else
                     return Status_SettingValueOutOfRange;
             } else if(c != 0)
@@ -239,6 +241,7 @@ status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t 
 
     return ok ? Status_OK : Status_BadNumberFormat;
 }
+
 // Extracts a floating point value from a string. The following code is based loosely on
 // the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
 // available conversion method examples, but has been highly optimized for Grbl. For known

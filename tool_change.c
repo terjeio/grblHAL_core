@@ -110,8 +110,8 @@ FLASHMEM static void change_completed (void)
     gc_state.tool_change = probe_toolsetter = false;
 
 #ifndef NO_SAFETY_DOOR_SUPPORT
-    if(hal.control.get_state().safety_door_ajar && hal.signals_cap.safety_door_ajar)
-        system_set_exec_state_flag(EXEC_SAFETY_DOOR);
+//    if(hal.control.get_state().safety_door_ajar && hal.signals_cap.safety_door_ajar)
+//        system_set_exec_state_flag(EXEC_SAFETY_DOOR);
 #endif
 }
 
@@ -244,10 +244,8 @@ FLASHMEM static void execute_return_from_g30 (void *data)
         }
     }
 
-    if(ok) {
-        protocol_buffer_synchronize();
+    if(ok && protocol_buffer_synchronize())
         sync_position();
-    }
 
     change_at_g30 = execute_posted = false;
 }
@@ -536,15 +534,17 @@ FLASHMEM static status_code_t tool_change (parser_state_t *parser_state)
     }
 #endif
 
-    protocol_buffer_synchronize();
-    sync_position();
+    if(protocol_buffer_synchronize()) {
 
-    // Enter tool change mode, waits for cycle start to continue.
-    parser_state->tool_change = true;
-    system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
-    protocol_execute_realtime();                    // Execute...
+        sync_position();
 
-    return Status_OK;
+        // Enter tool change mode, waits for cycle start to continue.
+        parser_state->tool_change = true;
+        system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
+        protocol_execute_realtime();                    // Execute...
+    }
+
+    return ABORTED ? Status_Reset : Status_OK;
 }
 
 // Claim HAL tool change entry points and clear current tool offsets.

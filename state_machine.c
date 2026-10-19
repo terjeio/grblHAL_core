@@ -467,6 +467,7 @@ static void state_cycle (uint_fast16_t rt_exec)
 FLASHMEM static void state_await_toolchanged (uint_fast16_t rt_exec)
 {
     if(rt_exec & EXEC_CYCLE_START) {
+
         if(!gc_state.tool_change) {
 
             if(hal.stream.suspend_read)
@@ -474,9 +475,9 @@ FLASHMEM static void state_await_toolchanged (uint_fast16_t rt_exec)
 
             gc_tool_changed();
         }
-        pending_state = gc_state.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE;
+
         state_set(STATE_IDLE);
-        state_set(STATE_CYCLE);
+        state_set(!gc_state.tool_change && hal.signals_cap.safety_door_ajar && hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_CYCLE);
         // Force a status report to let the sender know tool change is completed.
         system_set_exec_state_flag(EXEC_STATUS_REPORT);
     }

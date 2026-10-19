@@ -222,9 +222,9 @@ typedef union {
                  travel_changed          :1, //!< Set to true when maximum travel settings has changed.
                  is_homing               :1,
 				 is_parking			     :1, //!< Set to true when CMD_SAFETY_DOOR is received.
-				 soft_estop :1,
+				 soft_estop              :1,
 				 mpg_auto_reporting      :1, //!< Set to true when MPG auto real time reporting is enabled.
-                 unused                  :1;
+                 allow_pending_jog       :1;
     };
 } system_flags_t;
 

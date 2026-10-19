@@ -663,8 +663,10 @@ FLASHMEM float spindle_set_override (spindle_ptrs_t *spindle, override_t speed_o
                     spindle->update_pwm(spindle, spindle->get_pwm(spindle, spindle->param->rpm_overridden));
                 else if(spindle->update_rpm)
                     spindle->update_rpm(spindle, spindle->param->rpm_overridden);
-            } else
+            } else {
                 sys.step_control.update_spindle_rpm = On;
+                spindle->param->option.override_pending = state_get() == STATE_HOLD;
+            }
         }
 
         report_add_realtime(Report_Overrides); // Set to report change immediately
@@ -885,10 +887,13 @@ FLASHMEM bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, f
     if(!spindle->param->option.restore_rpm && spindle->cap.laser) { // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
         if(!(ok = !settings.flags.disable_laser_during_hold))
             ok = (sys.step_control.update_spindle_rpm = _spindle_set_state(spindle, state, 0.0f, 0));
-    } else if(!(ok = !spindle->param->option.restore_rpm && spindle_check_state(spindle, state) && spindle->param->rpm == rpm)) {
+    } else if(!(ok = !(spindle->param->option.restore_rpm || spindle->param->option.override_pending) && spindle_check_state(spindle, state) && spindle->param->rpm == rpm)) {
         ok = spindle_set_state_wait(spindle, state, rpm, delay_ms);
-        spindle->param->option.restore_rpm = Off;
+        if(!spindle->param->option.override_pending)
+            spindle->param->option.restore_rpm = Off;
     }
+
+    spindle->param->option.override_pending = Off;
 
     return ok;
 }

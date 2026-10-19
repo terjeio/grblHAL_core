@@ -22,18 +22,23 @@
 #include "hal.h"
 #include "stream_file.h"
 
+typedef struct {
+    bool eol_ok;
+    volatile line_number_t number;
+} line_state_t;
+
 typedef struct rd_stream {
     vfs_file_t *file_new;
     vfs_file_t *file;
     size_t position;
-    line_number_t line_number;
+    line_state_t line;
     stream_read_ptr read;
     status_message_ptr status_handler;
     on_file_end_ptr eof_handler;
     struct rd_stream *next;
 } rd_stream_t;
 
-static volatile line_number_t line_number = 0;
+static line_state_t line = {};
 static rd_stream_t *rd_streams = NULL;
 static status_message_ptr status_message;
 static on_file_end_ptr on_file_end;
@@ -45,24 +50,22 @@ static on_line_number_assigned_ptr on_line_number_assigned = NULL;
 // requested by the foreground process.
 static int32_t stream_read_file (void)
 {
-    static bool eol_ok = false;
-
     uint8_t c;
 
     if(hal.stream.file) {
         if(vfs_read(&c, 1, 1, hal.stream.file) == 1) {
             if(c == ASCII_CR || c == ASCII_LF) {
-                if(eol_ok)
+                if(line.eol_ok)
                     return SERIAL_NO_DATA;
-                line_number++;
-                eol_ok = true;
+                line.number++;
+                line.eol_ok = true;
             } else
-                eol_ok = false;
-        } else if(eol_ok) {
-            eol_ok = false;
+                line.eol_ok = false;
+        } else if(line.eol_ok) {
+            line.eol_ok = false;
             return ASCII_EOF;   // Return end-of-file. grbl.on_file_end() event generated in protocol.c.
         } else {
-            eol_ok = true;
+            line.eol_ok = true;
             return ASCII_LF;    // Return a linefeed if the last character was not a linefeed.
         }
     } else
@@ -71,16 +74,16 @@ static int32_t stream_read_file (void)
     return (int32_t)c;
 }
 
-FLASHMEM static line_number_t onLineNumberAssigned (line_number_t pline_number)
+FLASHMEM static line_number_t onLineNumberAssigned (line_number_t line_number)
 {
     if(rd_streams) {
-        if(pline_number)
-            line_number = pline_number;
+        if(line_number)
+            line.number = line_number;
         else
-            pline_number = line_number;
+            line_number = line.number;
     }
 
-    return on_line_number_assigned ? on_line_number_assigned(pline_number) : pline_number;
+    return on_line_number_assigned ? on_line_number_assigned(line_number) : line_number;
 }
 
 FLASHMEM static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
@@ -144,15 +147,15 @@ FLASHMEM vfs_file_t *stream_redirect_read (const char *filename, status_message_
 
     if((file = vfs_open(filename, "r"))) {
         rd_stream_t *rd_stream, *streams = rd_streams;
-        if((rd_stream = malloc(sizeof(rd_stream_t)))) {
+        if((rd_stream = calloc(1, sizeof(rd_stream_t)))) {
             if((rd_stream->file = hal.stream.file))
                 rd_stream->position = vfs_tell(rd_stream->file);
             rd_stream->file_new = file;
-            rd_stream->line_number = rd_streams ? line_number : 0;
             rd_stream->read = hal.stream.read;
             rd_stream->eof_handler = eof_handler;
             rd_stream->status_handler = status_handler;
-            rd_stream->next = NULL;
+            if(rd_streams)
+                rd_stream->line = line;
             stream_set_file(file, stream_read_file);
             if(streams == NULL)
                 rd_streams = rd_stream;
@@ -160,7 +163,8 @@ FLASHMEM vfs_file_t *stream_redirect_read (const char *filename, status_message_
                 while(streams->next && (streams = streams->next));
                 streams->next = rd_stream;
             }
-            line_number = 0;
+            line.eol_ok = false;
+            line.number = 0;
         } else {
             vfs_close(file);
             file = NULL;
@@ -202,7 +206,7 @@ FLASHMEM void stream_redirect_close (vfs_file_t *file)
         if(stream->file_new == file) {
             vfs_close(file);
             if((hal.stream.read = stream->read) == stream_read_file)
-                line_number = stream->line_number;
+                line = stream->line;
             stream_set_file(stream->file, stream->read);
             if(stream == rd_streams)
                 rd_streams = stream->next;

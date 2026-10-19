@@ -733,16 +733,20 @@ FLASHMEM bool vfs_unmount (const void *device, const char *path)
 {
     // TODO: close open files?
 
-    if(!strcmp(path, "/")) {
-        root.vfs = &fs_null;
-        root.mode = (vfs_st_mode_t){ .directory = true, .read_only = true, .hidden = true };
-        fsmounted.root = Off;
-        if(cwdmount == &root)
-            strcpy(cwd.name, "/");
-    } else {
+    vfs_mount_t *mount;
 
-        vfs_mount_t *mount = get_mount(path);
-        if(mount) {
+    if((mount = get_mount(path)) && mount->vfs != &fs_null) {
+
+        if(vfs.on_unmount)
+            vfs.on_unmount(path);
+
+        if(mount->vfs == root.vfs) {
+            root.vfs = &fs_null;
+            root.mode = (vfs_st_mode_t){ .directory = true, .read_only = true, .hidden = true };
+            fsmounted.root = Off;
+            if(cwdmount == &root)
+                strcpy(cwd.name, "/");
+        } else  {
 
             if(mount == cwdmount) {
                 cwdmount = &root;
@@ -761,10 +765,7 @@ FLASHMEM bool vfs_unmount (const void *device, const char *path)
         }
     }
 
-    if(vfs.on_unmount)
-        vfs.on_unmount(path);
-
-    return true;
+    return !!mount;
 }
 
 FLASHMEM vfs_drive_t *vfs_get_drive (const char *path)
@@ -772,15 +773,19 @@ FLASHMEM vfs_drive_t *vfs_get_drive (const char *path)
     static vfs_drive_t drive;
     static char mpath[VFS_MOUNT_PATH_LEN];
 
-    vfs_mount_t *mount = get_mount(path);
-    strcpy(mpath, mount->path);
-    drive.name = mount->vfs->fs_name;
-    drive.path = mpath;
-    drive.mode = mount->mode;
-    drive.removable = mount->vfs->removable;
-    drive.fs = mount->vfs;
+    vfs_mount_t *mount;
 
-    return &drive;
+    if((mount = get_mount(path))) {
+        strcpy(mpath, mount->path);
+        drive.name = mount->vfs->fs_name;
+        drive.path = mpath;
+        drive.mode = mount->mode;
+        drive.removable = mount->vfs->removable;
+        drive.fs = mount->vfs;
+    } else
+        memset(&drive, 0, sizeof(vfs_drive_t));
+
+    return &drive; // TODO: return NULL if not mounted?
 }
 
 FLASHMEM vfs_drives_t *vfs_drives_open (void)

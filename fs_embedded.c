@@ -46,7 +46,6 @@ static bool all_hidden = true;
 
 FLASHMEM static const embedded_file_t *find_file (const char *filename)
 {
-    uint_fast16_t idx = 0;
     const embedded_file_t *file = NULL;
     struct embedded_files *root = &embedded;
 
@@ -54,6 +53,7 @@ FLASHMEM static const embedded_file_t *find_file (const char *filename)
         filename++;
 
     if(root) do {
+        uint_fast16_t idx = 0;
         do {
             if(!strcmp(root->files[idx]->name, filename))
                 file = root->files[idx];
