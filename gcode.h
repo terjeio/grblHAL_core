@@ -713,8 +713,10 @@ typedef struct {
     line_number_t line_number;      //!< Last line number sent
     tool_id_t tool_pending;         //!< Tool to be selected on next M6
     tool_id_t g43_pending;          //!< Tool offset from tool in tool table to be applied on M6 completed, set when G43 is in block with M6
-    bool file_run;                  //!< Tracks % command
+    bool file_run;                  //!< Tracks % command for files
+    bool stream_run;                //!< Tracks % command for streams
     bool file_stream;               //!< Tracks streaming from file
+    vfs_file_t *file;               //!< Tracks streaming file
     bool is_laser_ppi_mode;
     bool tool_change;
     bool skip_blocks;               //!< true if skipping conditional blocks

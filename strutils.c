@@ -403,7 +403,7 @@ FLASHMEM char *strset (string_t *string, size_t len, const char *s)
         }
     }
 
-    if(len > string->len < len)
+    if(len > string->len)
         s = NULL;
     else {
         if(s)

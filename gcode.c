@@ -1278,21 +1278,19 @@ status_code_t gc_execute_block (char *block)
         .check_mode = state_get() == STATE_CHECK_MODE
     };
 
-    if((gc_parser_flags.fs_changed = gc_state.file_stream ? hal.stream.file == NULL : hal.stream.file != NULL))
-        gc_state.file_stream = hal.stream.file != NULL;
-
     block = gc_normalize_block(block, &status, &message);
-    if(status != Status_OK)
+    if(status != Status_OK || (*block == '\0' && message == NULL))
         RETURN(status);
+
+    if((gc_parser_flags.fs_changed = hal.stream.file != gc_state.file))
+        gc_state.file_stream = (gc_state.file = hal.stream.file) != NULL;
 
     // Determine if the line is a program start/end marker.
     if(*block == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
 
-        *block = '\0';
-
-        if(gc_state.file_stream) {
-
-            if(!gc_parser_flags.fs_changed && !gc_state.file_run)
+        if(gc_state.file) {
+            // TODO: fail if gc_state.stream_run is true?
+            if(!gc_parser_flags.fs_changed && (!gc_state.file_run || ngc_call_level()))
                 status = Status_UnexpectedDemarcation;
             else if(!(gc_state.file_run = gc_parser_flags.fs_changed)) {
                 protocol_buffer_synchronize(); // Empty planner buffer
@@ -1303,10 +1301,12 @@ status_code_t gc_execute_block (char *block)
                 }
             }
         } else
-            gc_state.file_run = !gc_state.file_run;
+            gc_state.stream_run = !gc_state.stream_run;
 
         if(status == Status_OK && grbl.on_file_demarcate)
-            grbl.on_file_demarcate(gc_state.file_run);
+            grbl.on_file_demarcate(gc_state.file_run || gc_state.stream_run);
+
+        RETURN(status);
     }
 
   /* -------------------------------------------------------------------------------------
@@ -2589,30 +2589,31 @@ status_code_t gc_execute_block (char *block)
 
             case IoMCode_AnalogOutSynced:
             case IoMCode_AnalogOutImmediate:
-                if(!(gc_block.words.e || gc_block.words.q))
-                    RETURN(Status_GcodeValueWordMissing);
+                {
+                    if(!(gc_block.words.e || gc_block.words.q))
+                        RETURN(Status_GcodeValueWordMissing);
 
-                if((uint32_t)gc_block.values.e >= (uint32_t)ioports_unclaimed(Port_Analog, Port_Output))
-                    RETURN(Status_GcodeValueOutOfRange);
-
-                xbar_t *port;
-
-                if((port = ioport_get_info(Port_Analog, Port_Output, (uint8_t)gc_block.values.e))) {
-
-                    analog_range_t range = xbar_get_analog_range(port);
-
-                    if(!(port->mode.pwm || port->mode.servo_pwm) && !isintf(gc_block.values.e))
-                         RETURN(Status_GcodeCommandValueNotInteger);
-
-                    if(gc_block.values.e < range.min || (range.max > 0.0 && gc_block.values.e > gc_block.values.e))
+                    if((uint32_t)gc_block.values.e >= (uint32_t)ioports_unclaimed(Port_Analog, Port_Output))
                         RETURN(Status_GcodeValueOutOfRange);
-                }
 
-                gc_block.output_command.is_digital = false;
-                gc_block.output_command.port = (uint8_t)gc_block.values.e;
-                gc_block.output_command.value = gc_block.values.q;
-                gc_block.words.e = gc_block.words.q = Off;
-            break;
+                    xbar_t *port;
+                    if((port = ioport_get_info(Port_Analog, Port_Output, (uint8_t)gc_block.values.e))) {
+
+                        analog_range_t range = xbar_get_analog_range(port);
+
+                        if(!(port->mode.pwm || port->mode.servo_pwm) && !isintf(gc_block.values.q))
+                            RETURN(Status_GcodeCommandValueNotInteger);
+
+                        if(gc_block.values.q < range.min || (range.max > 0.0 && gc_block.values.q > range.max))
+                            RETURN(Status_GcodeValueOutOfRange);
+                    }
+
+                    gc_block.output_command.is_digital = false;
+                    gc_block.output_command.port = (uint8_t)gc_block.values.e;
+                    gc_block.output_command.value = gc_block.values.q;
+                    gc_block.words.e = gc_block.words.q = Off;
+                }
+                break;
         }
     }
 
@@ -5022,7 +5023,7 @@ status_code_t gc_execute_block (char *block)
             if(!gc_parser_flags.check_mode && gc_block.modal.program_flow == ProgramFlow_CompletedM30 && hal.pallet_shuttle)
                 hal.pallet_shuttle();
 
-            gc_state.file_run = false;
+            gc_state.file_run = gc_state.stream_run = false;
             gc_state.modal.motion = MotionMode_Linear;
             gc_block.modal.canned_cycle_active = false;
             gc_state.modal.plane_select = PlaneSelect_XY;
