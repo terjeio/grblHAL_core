@@ -212,7 +212,6 @@ void fs_device_mount (void)
         .feof = fs_eof,
         .funlink = fs_unlink,
         .fmkdir = fs_dirop,
-        .fchdir = fs_dirop,
         .frmdir = fs_dirop,
         .fopendir = fs_opendir,
         .fclosedir = fs_closedir,

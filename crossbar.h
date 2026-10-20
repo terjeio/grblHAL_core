@@ -820,6 +820,11 @@ typedef union {
   pin.get_value = get_val_fn; \
 }
 
+typedef struct {
+    float min;
+    float max;
+} analog_range_t;
+
 //! /a cfg_data argument to /a xbar_config_ptr for gpio input pins
 typedef struct {
     bool inverted;
@@ -974,6 +979,7 @@ bool xbar_fn_for_secondary_motor (pin_function_t fn);
 const char *xbar_fn_to_pinname (pin_function_t id);
 const char *xbar_group_to_description ( pin_group_t group);
 const char *xbar_resolution_to_string (pin_cap_t cap);
+analog_range_t xbar_get_analog_range (xbar_t *port);
 control_signals_t xbar_fn_to_signals_mask (pin_function_t id);
 
 #endif

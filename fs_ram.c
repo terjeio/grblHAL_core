@@ -420,7 +420,6 @@ FLASHMEM void fs_ram_mount (void)
         .frename = fs_rename,
         .funlink = fs_unlink,
         .fmkdir = fs_dirop,
-        .fchdir = fs_dirop,
         .frmdir = fs_dirop,
         .fopendir = fs_opendir,
         .readdir = fs_readdir,

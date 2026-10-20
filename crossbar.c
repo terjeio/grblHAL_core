@@ -216,3 +216,17 @@ const char *xbar_resolution_to_string (pin_cap_t cap)
 {
     return !cap.analog || cap.pwm || cap.servo_pwm ? "?" : ((const char * const[]){"4", "8", "10", "12", "14", "16", "18", "20", "24", "32"})[cap.resolution];
 }
+
+analog_range_t xbar_get_analog_range (xbar_t *port)
+{
+    analog_range_t range = {0};
+
+    if(port->mode.servo_pwm)
+        range.max = 360.0f;
+    else if(port->mode.pwm) {
+        // TODO:API call? Same for servo?
+    } else
+        range.max = (float)((const uint32_t []){(1 << 4) - 1, (1 << 8) - 1, (1 << 10) - 1, (1 << 12) - 1, (1 << 14) - 1, (1 << 16) - 1, (1 << 18) - 1, (1 << 20) - 1 , (1 << 24) - 1, UINT32_MAX})[port->cap.resolution];
+
+    return range;
+}

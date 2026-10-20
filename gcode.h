@@ -309,7 +309,7 @@ typedef enum {
 typedef struct output_command {
     bool is_digital;
     uint8_t port;
-    int32_t value;
+    float value;
     struct output_command *next;
 } output_command_t;
 

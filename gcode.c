@@ -2591,8 +2591,23 @@ status_code_t gc_execute_block (char *block)
             case IoMCode_AnalogOutImmediate:
                 if(!(gc_block.words.e || gc_block.words.q))
                     RETURN(Status_GcodeValueWordMissing);
+
                 if((uint32_t)gc_block.values.e >= (uint32_t)ioports_unclaimed(Port_Analog, Port_Output))
-                    RETURN(Status_GcodeRPMOutOfRange);
+                    RETURN(Status_GcodeValueOutOfRange);
+
+                xbar_t *port;
+
+                if((port = ioport_get_info(Port_Analog, Port_Output, (uint8_t)gc_block.values.e))) {
+
+                    analog_range_t range = xbar_get_analog_range(port);
+
+                    if(!(port->mode.pwm || port->mode.servo_pwm) && !isintf(gc_block.values.e))
+                         RETURN(Status_GcodeCommandValueNotInteger);
+
+                    if(gc_block.values.e < range.min || (range.max > 0.0 && gc_block.values.e > gc_block.values.e))
+                        RETURN(Status_GcodeValueOutOfRange);
+                }
+
                 gc_block.output_command.is_digital = false;
                 gc_block.output_command.port = (uint8_t)gc_block.values.e;
                 gc_block.output_command.value = gc_block.values.q;

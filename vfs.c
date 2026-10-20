@@ -490,32 +490,57 @@ FLASHMEM int vfs_rmdir (const char *path)
 
 FLASHMEM int vfs_chdir (const char *path)
 {
-    int ret = -1;
+    char *cdir = NULL;
     vfs_mount_t *mount;
+    string_t tmp;
 
-    vfs_errno = 0;
+    if((vfs_errno = (tmp.name = malloc((tmp.len = strlen(cwd.name) + 1))) ? 0 : ENOMEM))
+        return -1;
 
     if((mount = get_mount((path = parse_path(path))))) {
-        if(mount->vfs->fchdir)
-            ret = mount->vfs->fchdir(get_filename(mount, path));
-        else {
-            vfs_stat_t st;
-            if(!((ret = mount->vfs->fstat(get_filename(mount, path), &st)) == 0 && st.st_mode.directory))
-                ret = -1;
+        vfs_stat_t st;
+        if(!(mount->vfs->fstat(get_filename(mount, path), &st)) == 0 && st.st_mode.directory)
+            vfs_errno = ENOTDIR;
+    } else
+        vfs_errno = ENOTDIR;
+
+    if(vfs_errno == 0 && mount->vfs->fchdir) {
+        if(mount == cwdmount)
+            cdir = mount->vfs->fgetcwd(NULL, 0);
+        if(mount->vfs->fchdir(get_filename(mount, path))) {
+            vfs_errno = EAGAIN;
+            if(cdir && mount->vfs->fchdir(cdir)) {
+                cwdmount = &root;
+                strcpy(cwd.name, (path = root.path));
+                vfs_errno = EIO;
+            } else
+                vfs_errno = EAGAIN;
         }
     }
 
-    if(ret == 0) {
-        if(strset(&cwd, strlen(path) + 1, path))
+    if(vfs_errno == 0) {
+        strcpy(tmp.name, cwd.name);
+        if(strset(&cwd, strlen(path) + 1, path)) {
+            if(cwdmount != mount && cwdmount->vfs->fchdir)
+                cwdmount->vfs->fchdir("/");
             cwdmount = mount;
-        else {
-            mount = &root;
-            strcpy(cwd.name, (path = root.path));
-            ret = -1;
+        } else {
+            if(cdir && mount->vfs->fchdir(cdir)) {
+                cwdmount = &root;
+                strcpy(cwd.name, (path = root.path));
+                vfs_errno = EIO;
+            } else {
+                cwd.len = tmp.len;
+                cwd.name = tmp.name;
+                vfs_errno = ENOMEM;
+            }
         }
     }
 
-    return ret;
+    if(tmp.name != cwd.name)
+        free(tmp.name);
+
+    return vfs_errno ? -1 : 0;
 }
 
 FLASHMEM vfs_dir_t *vfs_opendir (const char *path)
@@ -634,7 +659,9 @@ FLASHMEM static int _vfs_stat (vfs_mount_t *mount, const char *filename, vfs_sta
 
 FLASHMEM int vfs_stat (const char *filename, vfs_stat_t *st)
 {
-    return _vfs_stat(get_mount((filename = parse_path(filename))), filename, st);
+    filename = parse_path(filename);
+
+    return _vfs_stat(get_mount(filename), filename, st);
 }
 
 FLASHMEM int vfs_utime (const char *filename, struct tm *modified)

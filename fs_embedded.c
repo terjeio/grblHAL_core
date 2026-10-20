@@ -140,11 +140,6 @@ FLASHMEM static int fs_dirop (const char *path)
     return -1;
 }
 
-FLASHMEM static int fs_chdir (const char *path)
-{
-    return *path == '\0' && !all_hidden ? 0 : -1;
-}
-
 FLASHMEM static vfs_dir_t *fs_opendir (const char *path)
 {
     vfs_dir_t *dir = NULL;
@@ -233,7 +228,6 @@ FLASHMEM void fs_embedded_mount (const embedded_file_t **files)
         .feof = fs_eof,
         .funlink = fs_unlink,
         .fmkdir = fs_dirop,
-        .fchdir = fs_chdir,
         .frmdir = fs_dirop,
         .fopendir = fs_opendir,
         .readdir = fs_readdir,
