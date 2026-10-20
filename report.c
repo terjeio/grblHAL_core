@@ -852,7 +852,7 @@ FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
 
     stream_write(gc_spindle_get(0)->state.on ? (gc_spindle_get(0)->state.ccw ? " M4" : " M3") : " M5");
 
-    if(gc_state.tool_change)
+    if(gc_state.flags.tool_change)
         stream_write(" M6");
 
     if (gc_state.modal.coolant.value) {
@@ -1260,7 +1260,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
 
     sys_state_t state = state_get();
 
-    switch (gc_state.tool_change && state == STATE_CYCLE ? STATE_TOOL_CHANGE : state) {
+    switch (gc_state.flags.tool_change && state == STATE_CYCLE ? STATE_TOOL_CHANGE : state) {
 
         case STATE_IDLE:
             stream_write("Idle");
@@ -1505,7 +1505,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
     } else
         report->flags.wco = Off;
 
-    if(report->flags.value || gc_state.tool_change) {
+    if(report->flags.value || gc_state.flags.tool_change) {
 
         if(report->flags.wco) {
             if(settings.status_report.machine_position) {
@@ -1531,7 +1531,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
             stream_write(appendbuf(2, ",", uitoa((uint32_t)spindle_0->param->override_pct)));
         }
 
-        if(report->flags.spindle || report->flags.coolant || report->flags.tool || gc_state.tool_change) {
+        if(report->flags.spindle || report->flags.coolant || report->flags.tool || gc_state.flags.tool_change) {
 
             coolant_state_t cl_state = hal.coolant.get_state();
 
@@ -1554,7 +1554,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
             if (cl_state.mist)
                 *append++ = 'M';
 
-            if(gc_state.tool_change && !report->flags.tool)
+            if(gc_state.flags.tool_change && !report->flags.tool)
                 *append++ = 'T';
 
             *append = '\0';

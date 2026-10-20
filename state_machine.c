@@ -449,7 +449,7 @@ static void state_cycle (uint_fast16_t rt_exec)
         hal.stream.suspend_read(true); // Block reading from input stream until tool change state is acknowledged
 
     if (rt_exec & EXEC_CYCLE_COMPLETE)
-        state_set(gc_state.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE);
+        state_set(gc_state.flags.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE);
 
     if (rt_exec & (EXEC_MOTION_CANCEL|EXEC_MOTION_CANCEL_FAST)) {
         st_update_plan_block_parameters(!!(rt_exec & EXEC_MOTION_CANCEL_FAST));  // Notify stepper module to recompute for hold deceleration.
@@ -468,7 +468,7 @@ FLASHMEM static void state_await_toolchanged (uint_fast16_t rt_exec)
 {
     if(rt_exec & EXEC_CYCLE_START) {
 
-        if(!gc_state.tool_change) {
+        if(!gc_state.flags.tool_change) {
 
             if(hal.stream.suspend_read)
                 hal.stream.suspend_read(false); // Tool change complete, restore "normal" stream input.
@@ -477,7 +477,7 @@ FLASHMEM static void state_await_toolchanged (uint_fast16_t rt_exec)
         }
 
         state_set(STATE_IDLE);
-        state_set(!gc_state.tool_change && hal.signals_cap.safety_door_ajar && hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_CYCLE);
+        state_set(!gc_state.flags.tool_change && hal.signals_cap.safety_door_ajar && hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_CYCLE);
         // Force a status report to let the sender know tool change is completed.
         system_set_exec_state_flag(EXEC_STATUS_REPORT);
     }
@@ -500,7 +500,7 @@ FLASHMEM static void state_await_motion_cancel (uint_fast16_t rt_exec)
 
         if(sys.alarm_pending)
             system_set_exec_alarm(sys.alarm_pending);
-        else if(gc_state.tool_change)
+        else if(gc_state.flags.tool_change)
             state_set(STATE_TOOL_CHANGE);
     }
 }

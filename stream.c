@@ -571,7 +571,7 @@ FLASHMEM bool stream_close (io_stream_t const *stream)
 FLASHMEM void stream_set_file (vfs_file_t *file, stream_read_ptr read)
 {
     if(!(hal.stream.file = file))
-        gc_state.file_stream = false;
+        gc_state.flags.file_stream = false;
 
     if(read)
         hal.stream.read = read;
@@ -799,7 +799,7 @@ FLASHMEM bool stream_is_busy (bool is_connected)
             is_connected = hal.stream.is_connected();
     }
 
-    return is_connected || gc_state.file_run || !(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP)));
+    return is_connected || gc_state.flags.file_run || !(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP)));
 }
 
 FLASHMEM bool stream_mpg_set_baud (uint8_t baud)

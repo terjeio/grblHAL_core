@@ -107,7 +107,7 @@ FLASHMEM static void change_completed (void)
     if(grbl.on_probe_completed == onProbeCompleted)
         grbl.on_probe_completed = on_probe_completed;
 
-    gc_state.tool_change = probe_toolsetter = false;
+    gc_state.flags.tool_change = probe_toolsetter = false;
 
 //    if(hal.control.get_state().safety_door_ajar && hal.signals_cap.safety_door_ajar)
 //        system_set_exec_state_flag(EXEC_SAFETY_DOOR);
@@ -537,7 +537,7 @@ FLASHMEM static status_code_t tool_change (parser_state_t *parser_state)
         sync_position();
 
         // Enter tool change mode, waits for cycle start to continue.
-        parser_state->tool_change = true;
+        parser_state->flags.tool_change = true;
         system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
         protocol_execute_realtime();                    // Execute...
     }

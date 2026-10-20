@@ -114,7 +114,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 mc_reset();
         } else {
 
-            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
+            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.flags.tool_change) {
                 sys.flags.is_parking = false;
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
@@ -171,7 +171,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 if(event_signals.cycle_start) {
                     system_set_exec_state_flag(EXEC_CYCLE_START);
                     report_add_realtime(Report_CycleStart);
-                    gc_state.tool_change = false;
+                    gc_state.flags.tool_change = false;
                     if(grbl.on_cycle_start)
                         grbl.on_cycle_start();
                 }

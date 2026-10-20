@@ -861,7 +861,7 @@ inline static bool is_single_spindle_block (parser_block_t *gc_block, modal_grou
 // Driver support for pulsing the laser on signal is required for this to work.
 FLASHMEM bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length)
 {
-    gc_state.is_laser_ppi_mode = ppi > 0 && pulse_length > 0;
+    gc_state.flags.is_laser_ppi_mode = ppi > 0 && pulse_length > 0;
 
     return grbl.on_laser_ppi_enable && grbl.on_laser_ppi_enable(ppi, pulse_length);
 }
@@ -1283,28 +1283,28 @@ status_code_t gc_execute_block (char *block)
         RETURN(status);
 
     if((gc_parser_flags.fs_changed = hal.stream.file != gc_state.file))
-        gc_state.file_stream = (gc_state.file = hal.stream.file) != NULL;
+        gc_state.flags.file_stream = (gc_state.file = hal.stream.file) != NULL;
 
     // Determine if the line is a program start/end marker.
     if(*block == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
 
         if(gc_state.file) {
             // TODO: fail if gc_state.stream_run is true?
-            if(!gc_parser_flags.fs_changed && (!gc_state.file_run || ngc_call_level()))
+            if(!gc_parser_flags.fs_changed && (!gc_state.flags.file_run || ngc_call_level()))
                 status = Status_UnexpectedDemarcation;
-            else if(!(gc_state.file_run = gc_parser_flags.fs_changed)) {
+            else if(!(gc_state.flags.file_run = gc_parser_flags.fs_changed)) {
                 protocol_buffer_synchronize(); // Empty planner buffer
                 grbl.report.feedback_message(Message_ProgramEnd);
                 if(grbl.on_program_completed) {
                     grbl.on_program_completed(ProgramFlow_EndPercent, gc_parser_flags.check_mode);
-                    gc_state.file_stream = !gc_parser_flags.check_mode;
+                    gc_state.flags.file_stream = !gc_parser_flags.check_mode;
                 }
             }
         } else
-            gc_state.stream_run = !gc_state.stream_run;
+            gc_state.flags.stream_run = !gc_state.flags.stream_run;
 
         if(status == Status_OK && grbl.on_file_demarcate)
-            grbl.on_file_demarcate(gc_state.file_run || gc_state.stream_run);
+            grbl.on_file_demarcate(gc_state.flags.file_run || gc_state.flags.stream_run);
 
         RETURN(status);
     }
@@ -2298,7 +2298,7 @@ status_code_t gc_execute_block (char *block)
     if (axis_words.mask && !axis_command)
         axis_command = AxisCommand_MotionMode; // Assign implicit motion-mode
 
-    if(gc_state.tool_change && axis_command == AxisCommand_MotionMode && !gc_parser_flags.jog_motion)
+    if(gc_state.flags.tool_change && axis_command == AxisCommand_MotionMode && !gc_parser_flags.jog_motion)
         RETURN(Status_GcodeToolChangePending); // [Motions (except jogging) not allowed when changing tool]
 
     // Check for valid line number N value.
@@ -4267,7 +4267,7 @@ status_code_t gc_execute_block (char *block)
                 report_add_realtime(Report_Tool);
             } else { // Manual
                 int_value = (uint_fast16_t)Status_OK;
-                gc_state.tool_change = true;
+                gc_state.flags.tool_change = true;
                 system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
                 protocol_execute_realtime();                    // Execute...
             }
@@ -4424,7 +4424,7 @@ status_code_t gc_execute_block (char *block)
 
     plan_data.spindle.state = gc_state.spindle->state; // Set condition flag for planner use.
     if((plan_data.condition.is_rpm_rate_adjusted = laser && !gc_parser_flags.laser_disable && laser->state.on && laser->state.ccw))
-        plan_data.condition.is_laser_ppi_mode = gc_state.is_laser_ppi_mode;
+        plan_data.condition.is_laser_ppi_mode = gc_state.flags.is_laser_ppi_mode;
 
     // [8. Coolant control ]:
     if(command_words.M8) {
@@ -5023,7 +5023,7 @@ status_code_t gc_execute_block (char *block)
             if(!gc_parser_flags.check_mode && gc_block.modal.program_flow == ProgramFlow_CompletedM30 && hal.pallet_shuttle)
                 hal.pallet_shuttle();
 
-            gc_state.file_run = gc_state.stream_run = false;
+            gc_state.flags.file_run = gc_state.flags.stream_run = false;
             gc_state.modal.motion = MotionMode_Linear;
             gc_block.modal.canned_cycle_active = false;
             gc_state.modal.plane_select = PlaneSelect_XY;

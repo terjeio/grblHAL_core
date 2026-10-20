@@ -696,6 +696,16 @@ typedef struct {
 
 #endif // LATHE_UVW_OPTION
 
+typedef struct {
+    uint8_t file_run          :1, //!< Tracks % command for files
+            stream_run        :1, //!< Tracks % command for streams
+            file_stream       :1, //!< Tracks streaming from file
+            tool_change       :1, //!< true if skipping conditional blocks
+            is_laser_ppi_mode :1,
+            ccomp_off         :1; //!< true when cutter compensation has been turned off
+
+} parser_state_flags_t;
+
 /*! \brief Parser state
 
 */
@@ -713,14 +723,9 @@ typedef struct {
     line_number_t line_number;      //!< Last line number sent
     tool_id_t tool_pending;         //!< Tool to be selected on next M6
     tool_id_t g43_pending;          //!< Tool offset from tool in tool table to be applied on M6 completed, set when G43 is in block with M6
-    bool file_run;                  //!< Tracks % command for files
-    bool stream_run;                //!< Tracks % command for streams
-    bool file_stream;               //!< Tracks streaming from file
     vfs_file_t *file;               //!< Tracks streaming file
-    bool is_laser_ppi_mode;
-    bool tool_change;
+    parser_state_flags_t flags;     //!< Tracking flags
     bool skip_blocks;               //!< true if skipping conditional blocks
-    bool ccomp_off;                 //!< true when cutter compensation has been turned off
     status_code_t last_error;       //!< last return value from parser
     offset_id_t offset_id;          //!< id(x) of last G92 coordinate offset (into circular buffer)
     coord_data_t offset_queue[MAX_OFFSET_ENTRIES];
