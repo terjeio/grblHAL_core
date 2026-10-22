@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20261019
+#define GRBL_BUILD 20261022
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -84,6 +84,10 @@
 
 #ifndef __STATIC_FORCEINLINE
 #define __STATIC_FORCEINLINE __attribute__((always_inline)) static inline
+#endif
+
+#ifndef sizeof_field
+#define sizeof_field(TYPE, MEMBER) sizeof((((TYPE *)0)->MEMBER))
 #endif
 
 #if (COREXY || WALL_PLOTTER || DELTA_ROBOT || POLAR_ROBOT || RTCP_AC || ASYMMETRIC_GANGING || ASYMMETRIC_AUTO_SQUARE) && !defined(KINEMATICS_API)

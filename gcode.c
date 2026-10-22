@@ -2917,7 +2917,7 @@ status_code_t gc_execute_block (char *block)
             gc_block.words.d = Off;
         }
 
-        if(gc_state.ccomp_off = gc_state.modal.cutter_comp.side && !gc_block.modal.cutter_comp.side)
+        if(gc_state.flags.ccomp_off = gc_state.modal.cutter_comp.side && !gc_block.modal.cutter_comp.side)
             gc_block.modal.cutter_comp.dynamic = false;
     }
 
@@ -3361,7 +3361,7 @@ status_code_t gc_execute_block (char *block)
         // the value must be positive. In inverse time mode, a positive value must be passed with each block.
         } else {
 #if CUTTER_COMP_ENABLE
-            if(gc_state.ccomp_off) {
+            if(gc_state.flags.ccomp_off) {
 
                 if(!(gc_block.modal.motion == MotionMode_Linear || gc_block.modal.motion == MotionMode_Seek))
                     RETURN(Status_CutterCompConflict);
@@ -3370,7 +3370,7 @@ status_code_t gc_execute_block (char *block)
                 if(hypot_f(move.x, move.y) < gc_state.modal.cutter_comp.radius * 2.0f)
                     RETURN(Status_CutterCompConflict);
 
-                gc_state.ccomp_off = false;
+                gc_state.flags.ccomp_off = false;
             }
 #endif
             if(!gc_block.modal.canned_cycle_active)
@@ -5033,7 +5033,7 @@ status_code_t gc_execute_block (char *block)
 // TODO: check           gc_state.distance_per_rev = 0.0f;
 
 #if CUTTER_COMP_ENABLE
-            gc_state.ccomp_off = false;
+            gc_state.flags.ccomp_off = false;
             gc_state.modal.cutter_comp.side = CComp_Off;
             cc_enable(&gc_state.modal.cutter_comp, plane, (coord_data_t *)gc_state.position);
 #endif

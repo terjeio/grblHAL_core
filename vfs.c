@@ -123,27 +123,6 @@ FLASHMEM static vfs_dir_t *fs_opendir (const char *path)
 
 FLASHMEM static char *fs_readdir (vfs_dir_t *dir, vfs_dirent_t *dirent)
 {
-/*
-    vfs_mount_t **mount = (vfs_mount_t **)&dir->handle;
-
-    vfs_errno = 0;
-
-    if(*mount) {
-        strcpy(dirent->name, (*mount)->path + 1);
-        if(*dirent->name)
-            *(strchr(dirent->name, '\0') - 1) = '\0';
-        dirent->st_mode = (*mount)->mode;
-        dirent->st_mode.directory = true;
-        *mount = NULL;
-//      while((*mount = (*mount)->next)) {
-//          if(!(*mount)->mode.hidden)
-//              break;
-//      }
-    } else
-        *dirent->name = '\0';
-
-    return *dirent->name ? dirent->name : NULL;
-*/
     *dirent->name = '\0';
 
     return NULL;
@@ -155,36 +134,17 @@ FLASHMEM static void fs_closedir (vfs_dir_t *dir)
 
 FLASHMEM static int fs_stat (const char *filename, vfs_stat_t *st)
 {
-    char path[64], *fpath = path;
-    vfs_mount_t *mount;
-    size_t len = strlen(filename) + 2; // leading '/' + terminating '\0'
+    memset(st, 0, sizeof(vfs_stat_t));
 
-    if(len > sizeof(path) && (fpath = malloc(len)) == NULL)
-        return (vfs_errno = -1);
-
-    mount = path_is_mount_dir(strcat(strcpy(fpath, "/"), filename));
-
-    if(fpath != path)
-        free(fpath);
-
-    if(mount) {
-
-        if(!(mount->vfs->fstat && (vfs_errno = mount->vfs->fstat("/", st) == 0))) {
-
-            vfs_errno = 0;
-            st->st_size = 1024;
-            st->st_mode = mount->mode;
-            st->st_mode.directory = true;
-#if ESP_PLATFORM
-            st->st_mtim = mount->st_mtim;
-#else
-            st->st_mtime = mount->st_mtime;
-#endif
-        }
+    if(*filename++ == '/' && *filename == '\0') {
+        st->st_size = -1;
+        st->st_mode.directory = On;
+        st->st_mode.read_only = get_rootfs()->next == NULL;
+        vfs_errno = 0;
     } else
-        vfs_errno = -1;
+        vfs_errno = ENOTDIR;
 
-    return vfs_errno;
+    return vfs_errno ? -1 : 0;
 }
 
 FLASHMEM static int fs_chdir (const char *path)
@@ -238,6 +198,15 @@ volatile int vfs_errno = 0;
 vfs_events_t vfs = {0};
 
 static int _vfs_stat (vfs_mount_t *mount, const char *filename, vfs_stat_t *st);
+
+FLASHMEM static void mount_fs_null (void)
+{
+    root.vfs = &fs_null;
+    root.mode = (vfs_st_mode_t){ .directory = true, .read_only = true, .hidden = true };
+    fsmounted.root = Off;
+    if(cwdmount == &root)
+        strcpy(cwd.name, "/");
+}
 
 FLASHMEM static vfs_mount_t *get_rootfs (void)
 {
@@ -499,7 +468,7 @@ FLASHMEM int vfs_chdir (const char *path)
 
     if((mount = get_mount((path = parse_path(path))))) {
         vfs_stat_t st;
-        if(!(mount->vfs->fstat(get_filename(mount, path), &st)) == 0 && st.st_mode.directory)
+        if(!(mount->vfs->fstat(get_filename(mount, path), &st) == 0 && st.st_mode.directory))
             vfs_errno = ENOTDIR;
     } else
         vfs_errno = ENOTDIR;
@@ -698,6 +667,9 @@ FLASHMEM bool vfs_mount (const void *device, const char *path, const vfs_t *fs, 
 {
     vfs_mount_t *mount;
 
+    if(fs->fchdir && !fs->fgetcwd)
+        return false;
+
     if((mount = path_is_mount_dir(path)) && mount->vfs != &fs_null)
         return mount->vfs == fs;
 
@@ -760,13 +732,9 @@ FLASHMEM bool vfs_unmount (const void *device, const char *path)
         if(vfs.on_unmount)
             vfs.on_unmount(path);
 
-        if(mount->vfs == root.vfs) {
-            root.vfs = &fs_null;
-            root.mode = (vfs_st_mode_t){ .directory = true, .read_only = true, .hidden = true };
-            fsmounted.root = Off;
-            if(cwdmount == &root)
-                strcpy(cwd.name, "/");
-        } else  {
+        if(mount->vfs == root.vfs)
+            mount_fs_null();
+        else {
 
             if(mount == cwdmount) {
                 cwdmount = &root;
@@ -885,7 +853,7 @@ FLASHMEM int vfs_drive_format (vfs_drive_t *drive)
         int ferrno;
 
         if(mount == cwdmount)
-            strcpy(cwd.name, "/");
+            strcpy(cwd.name, drive->path);
 
         if(vfs.on_unmount)
             vfs.on_unmount(drive->path);
@@ -897,8 +865,17 @@ FLASHMEM int vfs_drive_format (vfs_drive_t *drive)
                 vfs.on_mount(drive->path, drive->fs, drive->mode);
         }
 
-        if((vfs_errno = ferrno) && fs->device_mount)
+        if((vfs_errno = ferrno) && fs->device_mount) {
+            if(mount == cwdmount) {
+                if(mount->vfs == root.vfs)
+                    mount_fs_null();
+                else {
+                    cwdmount = &root;
+                    strcpy(cwd.name, root.path);
+                }
+            }
             fs->device_mount(mount->device, false); // dismount drive on error
+        }
     } else
         vfs_errno = -1;
 

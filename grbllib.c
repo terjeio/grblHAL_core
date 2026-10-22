@@ -94,7 +94,7 @@ __attribute__((weak)) void board_ports_init (void)
     // NOOP
 }
 
-__attribute__((always_inline)) static inline void task_free (core_task_t *task)
+__STATIC_FORCEINLINE void task_free (core_task_t *task)
 {
     task->fn = NULL;
     task->next = NULL;
@@ -102,7 +102,7 @@ __attribute__((always_inline)) static inline void task_free (core_task_t *task)
         tasks.last_freed = task;
 }
 
-__attribute__((always_inline)) static inline core_task_t *task_run (core_task_t *task)
+__STATIC_FORCEINLINE core_task_t *task_run (core_task_t *task)
 {
     hal.irq_disable();
 
@@ -525,7 +525,7 @@ FLASHMEM int grbl_enter (void)
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 #endif
 
-__attribute__((always_inline)) static inline core_task_t *task_alloc (void)
+__STATIC_FORCEINLINE core_task_t *task_alloc (void)
 {
     core_task_t *task = NULL;
     uint_fast8_t idx = CORE_TASK_POOL_SIZE;
@@ -539,6 +539,17 @@ __attribute__((always_inline)) static inline core_task_t *task_alloc (void)
     } while(task == NULL && idx);
 
     return task;
+}
+
+__STATIC_FORCEINLINE core_task_t *task_get_due (uint32_t now)
+{
+    hal.irq_disable();
+    if(tasks.delayed && (int32_t)(tasks.delayed->time - now) <= 0) {
+        return tasks.delayed;
+    } else
+        hal.irq_enable();
+
+    return NULL;
 }
 
 void task_execute (bool wait)
@@ -570,9 +581,7 @@ void task_execute (bool wait)
             task->lock--;
         } while((task = task->next));
 
-        while((task = tasks.delayed) && (int32_t)(task->time - now) <= 0) {
-
-            hal.irq_disable();
+        while((task = task_get_due(now))) {
 
             if(task == tasks.delayed)
                 tasks.delayed = task->next;
