@@ -662,7 +662,7 @@ FLASHMEM static status_code_t set_axis_mask (setting_id_t id, uint_fast16_t valu
             break;
 
         case Setting_HomingDirMask:
-            settings.homing.dir_mask.value = value;
+            settings.homing.dir_mask.value = value & system_axis_mask();
             break;
 
         case Setting_SteppersEnergize:
@@ -1712,10 +1712,6 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
                            (settings.pwm_spindle.flags.ignore_delays ? 0b10000 : 0));
             break;
 
-        case Setting_HomingDirMask:
-            value = settings.homing.dir_mask.mask & system_axis_mask();
-            break;
-
         case Setting_Mode:
             value = settings.mode;
             break;
@@ -1784,10 +1780,6 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
 #else
             value = settings.homing.flags.enabled;
 #endif
-            break;
-
-        case Setting_SteppersEnergize:
-            value = settings.steppers.energize.mask;
             break;
 
         case Setting_EnableLegacyRTCommands:

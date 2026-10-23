@@ -735,6 +735,7 @@ typedef struct {
                                     //!< machine zero in mm. Persistent and loaded from non-volatile storage
                                     //!< on boot when COMPATIBILITY_LEVEL <= 1
     tool_data_t *tool;              //!< Tracks tool number and tool offset
+    char *message;
     g66_arguments_t *g66_args;      //!< Linked list with G66 arguments, NULL if G66 is not active.
 } parser_state_t;
 

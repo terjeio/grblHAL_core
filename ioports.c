@@ -1602,9 +1602,9 @@ FLASHMEM static void ioports_configure (settings_t *settings)
                     if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask) {
                         in_config.inverted = !!(settings->control_invert.mask & ctrl.mask);
                         in_config.pull_mode = (settings->control_disable_pullup.mask & ctrl.mask) ? PullMode_None : PullMode_Up;
-                    } else if(xbar->function == Input_MPGSelect)
-                        in_config.pull_mode = PullMode_Up;
-                }
+                    }
+                } else if(xbar->function == Input_MPGSelect)
+                    in_config.pull_mode = PullMode_Up;
             }
             xbar->config(xbar, &in_config, false);
         }

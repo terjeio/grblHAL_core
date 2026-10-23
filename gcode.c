@@ -613,7 +613,8 @@ FLASHMEM bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
         if(actions->command.G7) { // ?? add state validation++
             plane_t plane;
             gc_get_plane_data(&plane, gc_state.modal.plane_select);
-            cc_enable(&gc_state.modal.cutter_comp, plane, (coord_data_t *)gc_state.position);
+            if(!cc_enable(&gc_state.modal.cutter_comp, plane, (coord_data_t *)gc_state.position))
+                return false;
         }
 #endif
 
@@ -718,6 +719,12 @@ static status_code_t gc_at_exit (status_code_t status)
 
         pending_tool = NULL;
         gc_state.g43_pending = (tool_id_t)-1;
+
+        if(gc_state.message) {
+            free(gc_state.message);
+            gc_state.message = NULL;
+        }
+
 
         // Clear any pending output commands
         output_commands = gc_clear_output_commands(output_commands);
@@ -1141,8 +1148,13 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
                         }
                     }
 
-                    if(*comment && (message == NULL || *message == NULL) && grbl.on_gcode_comment)
-                        *status = grbl.on_gcode_comment(comment);
+                    if(*comment && (message == NULL || *message == NULL) && grbl.on_gcode_comment) {
+                        if((*status = grbl.on_gcode_comment(comment)) != Status_OK) {
+                            *block = '\0';
+                            *message = NULL;
+                            return block;
+                        }
+                    }
                 }
                 comment = NULL;
                 break;
@@ -1262,7 +1274,6 @@ status_code_t gc_execute_block (char *block)
     };
 
 #endif
-    char *message = NULL;
     status_code_t status = Status_OK;
     struct {
         float f;
@@ -1278,8 +1289,13 @@ status_code_t gc_execute_block (char *block)
         .check_mode = state_get() == STATE_CHECK_MODE
     };
 
-    block = gc_normalize_block(block, &status, &message);
-    if(status != Status_OK || (*block == '\0' && message == NULL))
+    if(gc_state.message) {
+        free(gc_state.message);
+        gc_state.message = NULL;
+    }
+
+    block = gc_normalize_block(block, &status, &gc_state.message);
+    if(status != Status_OK || (*block == '\0' && gc_state.message == NULL))
         RETURN(status);
 
     if((gc_parser_flags.fs_changed = hal.stream.file != gc_state.file))
@@ -1337,15 +1353,17 @@ status_code_t gc_execute_block (char *block)
     if(*block != 'N' && hal.stream.file && grbl.on_line_number_assigned)
         gc_block.values.n = (int32_t)grbl.on_line_number_assigned((line_number_t)0);
 
-    if(message && gc_parser_flags.check_mode) {
-        free(message);
-        message = NULL;
+    if(gc_state.message && gc_parser_flags.check_mode) {
+        free(gc_state.message);
+        gc_state.message = NULL;
     }
 
     if(*block == '\0') {
 
-        if(message)
-            gc_output_message(message);
+        if(gc_state.message) {
+            gc_output_message(gc_state.message);
+            gc_state.message = NULL;
+        }
 
         return Status_OK;
     }
@@ -2917,7 +2935,7 @@ status_code_t gc_execute_block (char *block)
             gc_block.words.d = Off;
         }
 
-        if(gc_state.flags.ccomp_off = gc_state.modal.cutter_comp.side && !gc_block.modal.cutter_comp.side)
+        if((gc_state.flags.ccomp_off = gc_state.modal.cutter_comp.side && !gc_block.modal.cutter_comp.side))
             gc_block.modal.cutter_comp.dynamic = false;
     }
 
@@ -3978,6 +3996,10 @@ status_code_t gc_execute_block (char *block)
 #if CUTTER_COMP_ENABLE || (LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE)
     if(grbl.on_pre_gcode_execute) {
         status_code_t status;
+        if(gc_state.message) {
+            free(gc_state.message);
+            gc_state.message = NULL;
+        }
         if(!gc_parser_flags.jog_motion)
             command_words.G1 |= gc_block.modal.motion != MotionMode_None && axis_command == AxisCommand_MotionMode; // TODO: always set?
         if((status = grbl.on_pre_gcode_execute(&command_words, &gc_state, &gc_block, sspindle)) != Status_Unhandled)
@@ -4104,8 +4126,8 @@ status_code_t gc_execute_block (char *block)
     plan_data.line_number = gc_state.line_number = (line_number_t)gc_block.values.n; // Record data for planner use.
 
     // [1. Comments feedback ]: Extracted in protocol.c if HAL entry point provided
-    plan_data.message = message;
-    message = NULL;
+    plan_data.message = gc_state.message;
+    gc_state.message = NULL;
 
     // [2. Set feed rate mode ]:
     if(command_words.G5)
@@ -4235,7 +4257,7 @@ status_code_t gc_execute_block (char *block)
 
         if(plan_data.message) {
             if(gc_parser_flags.check_mode)
-                free(message);
+                free(plan_data.message);
             else
                 gc_output_message(plan_data.message);
             plan_data.message = NULL;
@@ -4833,7 +4855,8 @@ status_code_t gc_execute_block (char *block)
 #endif
                         g33_1_words.mask = macro_arguments_push(&gc_block.values, g33_1_words, NULL).mask;
                         RETURN(macro_call(331, (line_number_t)gc_block.values.n, g33_1_words, 1));
-                    }
+                    } else
+                        RETURN(status);
                 }
                 break;
 
@@ -4982,8 +5005,10 @@ status_code_t gc_execute_block (char *block)
             break;
     }
 
-    if(plan_data.message)
+    if(plan_data.message) {
         gc_output_message(plan_data.message);
+        plan_data.message = NULL;
+    }
 
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may
