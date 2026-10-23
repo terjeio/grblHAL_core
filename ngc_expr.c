@@ -820,9 +820,7 @@ FLASHMEM status_code_t ngc_read_real_value (char *line, uint_fast8_t *pos, float
     else
         status = (read_float(line, pos, value) ? Status_OK : Status_BadNumberFormat);
 
-    if(isnan(*value))
-        status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
-    else if(isinf(*value))
+    if(status == Status_OK && (isnan(*value) || isinf(*value)))
         status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
 
     return status;

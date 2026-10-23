@@ -347,14 +347,12 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
     if(speed == 0.0f)
         return false;
 
-    motor->dir.bits = (move < 0.0f ? motor->axis.bits : 0);
-
     st2_motor_set_speed(motor, speed);
 
     if(_st2_calc_steps(&motor->profile, move, type) == 1 && type == Stepper2_Steps) {
         if(motor->profile.state == State_Idle) {
 
-            if(motor->dir.bits)
+            if((motor->dir.bits = (move < 0.0f ? motor->axis.bits : 0)))
                 motor->position--;
             else
                 motor->position++;
@@ -364,6 +362,8 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
 
         return motor->profile.state == State_Idle;
     }
+
+    motor->dir.bits = (move < 0.0f ? motor->axis.bits : 0);
 
     if(!_st2_start(&motor->profile))
         return false;

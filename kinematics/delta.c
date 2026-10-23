@@ -129,6 +129,13 @@ static bool delta_calcInverse (coord_data_t *pos, coord_data_t *target)
 {
     target->values[A_MOTOR] = target->values[B_MOTOR] = target->values[C_MOTOR] = 0.0f;
 
+#if N_AXIS == 4
+    target->values[3] = pos->values[3];
+#elif N_AXIS > 4
+    for(uint_fast8_t idx = 3; idx < N_AXIS; idx++)
+        target->values[idx] = pos->values[idx];
+#endif
+
     return delta_calcAngleYZ(pos->x, pos->y, pos->z, &target->values[A_MOTOR]) &&
             delta_calcAngleYZ(pos->x * COS120 + pos->y * SIN120, pos->y * COS120 - pos->x * SIN120, pos->z, &target->values[B_MOTOR]) &&  // rotate coords to +120 deg
              delta_calcAngleYZ(pos->x * COS120 - pos->y * SIN120, pos->y * COS120 + pos->x * SIN120, pos->z, &target->values[C_MOTOR]);  // rotate coords to -120 deg
@@ -177,6 +184,13 @@ static coord_data_t *transform_to_cartesian (coord_data_t *target, coord_data_t 
         target->y = (a2 * target->z + b2) / dnm;
     }
 
+#if N_AXIS == 4
+    target->values[3] = position->values[3];
+#elif N_AXIS > 4
+    for(uint_fast8_t idx = 3; idx < N_AXIS; idx++)
+        target->values[idx] = position->values[idx];
+#endif
+
     return target;
 }
 
@@ -202,9 +216,22 @@ static coord_data_t *transform_from_cartesian (coord_data_t *target, coord_data_
     return target;
 }
 
-static inline float get_distance (coord_data_t *p0, coord_data_t *p1)
+static inline float get_distance (coord_data_t *delta)
 {
-    uint_fast8_t idx = Z_AXIS + 1;
+    uint_fast8_t idx = N_AXIS;
+    float distance = 0.0f;
+
+    do {
+        idx--;
+        distance += delta->values[idx] * delta->values[idx];
+    } while(idx);
+
+    return sqrtf(distance);
+}
+
+static inline float get_distance2 (coord_data_t *p0, coord_data_t *p1)
+{
+    uint_fast8_t idx = N_AXIS;
     float distance = 0.0f;
 
     do {
@@ -242,8 +269,14 @@ static coord_data_t *delta_segment_line (coord_data_t *target, coord_data_t *pos
             delta.x = target->x - segment_target.x;
             delta.y = target->y - segment_target.y;
             delta.z = target->z - segment_target.z;
+#if N_AXIS == 4
+            delta.values[3] = target->values[3] - segment_target.values[3];
+#elif N_AXIS > 4
+            for(idx = 3; idx < N_AXIS; idx++)
+                delta.values[idx] = target->values[idx] - segment_target.values[idx];
+#endif
 
-            distance = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
+            distance = get_distance(&delta);
 
             if((segmented = distance > machine.cfg.sl)) {
 
@@ -287,7 +320,7 @@ static coord_data_t *delta_segment_line (coord_data_t *target, coord_data_t *pos
             memcpy(&mpos, &machine.last_pos, sizeof(coord_data_t));
             iterations = 0;
         } else if(!pl_data->condition.rapid_motion && distance != 0.0f) {
-            float rate_multiplier = get_distance(&mpos, &machine.last_pos) / distance;
+            float rate_multiplier = get_distance2(&mpos, &machine.last_pos) / distance;
             pl_data->feed_rate *= rate_multiplier;
             pl_data->rate_multiplier = 1.0f / rate_multiplier;
         }
@@ -823,7 +856,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:Delta v0.05]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:Delta v0.06]" ASCII_EOL);
 }
 
 static status_code_t delta_info (sys_state_t state, char *args)

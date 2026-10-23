@@ -3974,7 +3974,7 @@ status_code_t gc_execute_block (char *block)
                 case MotionMode_LatheRoughingX:
                 case MotionMode_LatheRoughingX1:
                 case MotionMode_LatheRoughingX2:
-                    if(gc_state.modal.plane_select != PlaneSelect_ZX)
+                    if(gc_block.modal.plane_select != PlaneSelect_ZX)
                         RETURN(Status_GcodeIllegalPlane);
                     if(!gc_block.words.q)
                         RETURN(Status_GcodeValueWordMissing); // [No subroutine]
@@ -4259,57 +4259,60 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [6. Change tool ]: Delegated to (possible) driver implementation
-    if(command_words.M6 && gc_block.tool_action == ToolAction_Change && !gc_parser_flags.check_mode) {
+    if(command_words.M6 && gc_block.tool_action == ToolAction_Change) {
 
-        pending_tool = tool_get_pending(gc_state.tool_pending, &plan_data.message);
+        if(!gc_parser_flags.check_mode) {
 
-        protocol_buffer_synchronize();
+            pending_tool = tool_get_pending(gc_state.tool_pending, &plan_data.message);
 
-        if(plan_data.message) {
-            if(gc_parser_flags.check_mode)
-                free(plan_data.message);
-            else
+            protocol_buffer_synchronize();
+
+            if(plan_data.message) {
                 gc_output_message(plan_data.message);
+                plan_data.message = NULL;
+            }
+
+            if(pending_tool->tool_id != gc_state.tool->tool_id) {
+
+                if(grbl.on_tool_selected) {
+
+                    spindle_state_t state = sspindle ? sspindle->state : (spindle_state_t){0};
+
+                    grbl.on_tool_selected(pending_tool);
+
+                    if(sspindle && state.value != sspindle->state.value) {
+                        command_words.M7 = On;
+                        gc_block.spindle_modal.state = sspindle->state;
+                    }
+                }
+
+                bool macro_toolchange = false;
+
+                if(hal.tool.change) { // ATC
+                    if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK) {
+    #if NGC_EXPRESSIONS_ENABLE
+                        if(!(macro_toolchange = (int_value == Status_Unhandled)))
+    #endif
+                            RETURN((status_code_t)int_value);
+                    }
+                    report_add_realtime(Report_Tool);
+                } else { // Manual
+                    int_value = (uint_fast16_t)Status_OK;
+                    gc_state.flags.tool_change = true;
+                    system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
+                    protocol_execute_realtime();                    // Execute...
+                }
+
+                if(!(macro_toolchange || state_get() == STATE_TOOL_CHANGE))
+                    gc_tool_changed();
+                else if(grbl.tool_table.n_tools && command_words.G8 && gc_block.modal.tool_offset_mode == ToolLengthOffset_Enable) {
+                    command_words.G8 = Off;
+                    gc_state.g43_pending = gc_block.values.h > 0.0f ? (tool_id_t)gc_block.values.h : pending_tool->tool_id;
+                }
+            }
+        } else if(plan_data.message) {
+            free(plan_data.message);
             plan_data.message = NULL;
-        }
-
-        if(pending_tool->tool_id != gc_state.tool->tool_id) {
-
-            if(grbl.on_tool_selected) {
-
-                spindle_state_t state = sspindle ? sspindle->state : (spindle_state_t){0};
-
-                grbl.on_tool_selected(pending_tool);
-
-                if(sspindle && state.value != sspindle->state.value) {
-                    command_words.M7 = On;
-                    gc_block.spindle_modal.state = sspindle->state;
-                }
-            }
-
-            bool macro_toolchange = false;
-
-            if(hal.tool.change) { // ATC
-                if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK) {
-#if NGC_EXPRESSIONS_ENABLE
-                    if(!(macro_toolchange = (int_value == Status_Unhandled)))
-#endif
-                        RETURN((status_code_t)int_value);
-                }
-                report_add_realtime(Report_Tool);
-            } else { // Manual
-                int_value = (uint_fast16_t)Status_OK;
-                gc_state.flags.tool_change = true;
-                system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
-                protocol_execute_realtime();                    // Execute...
-            }
-
-            if(!(macro_toolchange || state_get() == STATE_TOOL_CHANGE))
-                gc_tool_changed();
-            else if(grbl.tool_table.n_tools && command_words.G8 && gc_block.modal.tool_offset_mode == ToolLengthOffset_Enable) {
-                command_words.G8 = Off;
-                gc_state.g43_pending = gc_block.values.h > 0.0f ? (tool_id_t)gc_block.values.h : pending_tool->tool_id;
-            }
         }
     }
 
