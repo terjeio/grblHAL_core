@@ -200,7 +200,7 @@ static int fs_stat (const char *filename, vfs_stat_t *st)
     return device ? 0 : -1;
 }
 
-void fs_device_mount (void)
+bool fs_device_mount (void)
 {
     PROGMEM static const vfs_t fs = {
         .fs_name = "device",
@@ -221,4 +221,6 @@ void fs_device_mount (void)
 
     if(!ok)
         ok = vfs_mount(NULL, "/dev", &fs, (vfs_st_mode_t){ .directory = true, .hidden = true });
+
+    return ok;
 }

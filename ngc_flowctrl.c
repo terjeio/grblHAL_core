@@ -253,7 +253,7 @@ FLASHMEM static ngc_sub_t *sub_get (uint32_t o_label)
     if((sub = subs)) do {
         if(sub->o_label == o_label && sub->file == hal.stream.file)
             break;
-    } while(sub->next && (sub = sub->next));
+    } while((sub = sub->next));
 
     return sub;
 }
@@ -325,12 +325,16 @@ FLASHMEM static bool stack_pull (void)
     return ok;
 }
 
+FLASHMEM static bool stack_unwind (uint32_t o_label)
+{
+    while(stack_idx >= 0 && o_label != stack[stack_idx].o_label && stack_pull());
+
+    return stack_idx >= 0;
+}
+
 FLASHMEM static void stack_unwind_sub (uint32_t o_label, bool success)
 {
-    while(stack_idx >= 0 && stack[stack_idx].o_label != o_label)
-        stack_pull();
-
-    if(stack_idx >= 0) {
+    if(stack_unwind(o_label)) {
 
         on_endsub_ptr callback = stack[stack_idx].sub->callback;
 
@@ -452,12 +456,14 @@ FLASHMEM static status_code_t onNamedSubError (status_code_t status)
 
 FLASHMEM static status_code_t onNamedSubEOF (vfs_file_t *file, status_code_t status)
 {
+    bool skipping = stack_idx != -1 && stack[stack_idx].skip;
+
     if(stack_idx == -1 || stack[stack_idx].file == file) {
         stream_redirect_close(file);
         ngc_flowctrl_unwind_stack(file);
     }
 
-    return status;
+    return skipping ? Status_FlowControlSyntaxError : (subs ? status : Status_Handled);
 }
 
 FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number, char *line, uint_fast8_t *pos, bool *skip)
@@ -608,8 +614,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
         case NGCFlowCtrl_Break:
             if(hal.stream.file) {
                 if(!skipping) {
-                    while(o_label != stack[stack_idx].o_label && stack_pull());
-                    last_op = stack_idx >= 0 ? stack[stack_idx].operation : NGCFlowCtrl_NoOp;
+                    last_op = stack_unwind(o_label) ? stack[stack_idx].operation : NGCFlowCtrl_NoOp;
                     if(last_op == NGCFlowCtrl_Do || last_op == NGCFlowCtrl_While || last_op == NGCFlowCtrl_Repeat) {
                         if(o_label == stack[stack_idx].o_label) {
                             stack[stack_idx].repeats = 0;
@@ -625,8 +630,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
         case NGCFlowCtrl_Continue:
             if(hal.stream.file) {
                 if(!skipping) {
-                    while(o_label != stack[stack_idx].o_label && stack_pull());
-                    if(stack_idx >= 0 && o_label == stack[stack_idx].o_label) switch(stack[stack_idx].operation) {
+                    if(stack_unwind(o_label)) switch(stack[stack_idx].operation) {
 
                         case NGCFlowCtrl_Repeat:
                             if(stack[stack_idx].repeats && --stack[stack_idx].repeats)
@@ -686,6 +690,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                 if(!(sub = sub_get(o_label)))
                     status = Status_FlowControlSyntaxError;
                 else if(skip_sub && o_label > NGC_MAX_PARAM_ID) {
+                    stack[stack_idx].skip = false;
                     stream_reposition(sub->file, sub->file_pos, sub->line_number);
                 } else {
                     status_code_t status = ngc_eval_expression(line, pos, &value);
@@ -778,7 +783,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                         if(status != Status_OK && o_label > NGC_MAX_PARAM_ID)
                             stream_redirect_close(sub->file);
                         else
-                            skip_sub = o_label > NGC_MAX_PARAM_ID;
+                            skip_sub = stack[stack_idx].skip = o_label > NGC_MAX_PARAM_ID;
 
                     } else if(status == Status_OK)
                         status = Status_FlowControlSyntaxError;

@@ -21,4 +21,4 @@
   along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
-void fs_ram_mount (void);
+bool fs_ram_mount (void);

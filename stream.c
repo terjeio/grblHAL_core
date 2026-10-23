@@ -103,6 +103,8 @@ static struct {
     on_gcode_mode_changed_ptr on_gcode_mode_changed;
 } mpg;
 
+extern void gc_filestream_changed (vfs_file_t *file);
+
 FLASHMEM void stream_register_streams (io_stream_details_t *details)
 {
     if(details->n_streams) {
@@ -570,8 +572,7 @@ FLASHMEM bool stream_close (io_stream_t const *stream)
 
 FLASHMEM void stream_set_file (vfs_file_t *file, stream_read_ptr read)
 {
-    if(!(hal.stream.file = file))
-        gc_state.flags.file_stream = false;
+    gc_filestream_changed((hal.stream.file = file));
 
     if(read)
         hal.stream.read = read;

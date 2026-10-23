@@ -109,7 +109,8 @@ typedef enum {
     Setting_ParkingTarget = 58,
     Setting_ParkingFastRate = 59,
 
-    Setting_RestoreOverrides = 60,
+    Setting_EndProgramActions = 60,
+    Setting_RestoreOverrides = Setting_EndProgramActions, // Deprecated
     Setting_DoorOptions = 61,
     Setting_SleepEnable = 62,
     Setting_HoldActions = 63,
@@ -604,7 +605,7 @@ typedef union {
     uint32_t value;
     struct {
         uint32_t report_inches                   :1,
-                 restore_overrides               :1,
+                 restore_overrides               :1, // M2/M30 program end action
                  dst_active                      :1, // Daylight savings time
                  sleep_enable                    :1,
                  disable_laser_during_hold       :1,
@@ -629,7 +630,8 @@ typedef union {
                  set_rpm_0_during_hold           :1,
                  cc_lookahead_enable             :1, // For cutter compensation
                  cc_chamfer_corner               :1, // For cutter compensation
-                 unassigned                      :3;
+                 no_restore_coord_sys            :1, // M2/M30 program end action
+                 unassigned                      :2;
     };
 } settingflags_t;
 

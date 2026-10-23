@@ -66,7 +66,7 @@ static bool ram_write (ram_file_t *file, const uint8_t *s, size_t length)
         file->remaining = file->len;
         file->pos = data + file->len;
     } else {
-        if(file->data != NULL)
+        if(file->data)
             free((void *)file->data);
         file->data = file->pos = NULL;
         file->len = file->remaining = 0;
@@ -236,13 +236,32 @@ FLASHMEM static int fs_seek (vfs_file_t *file, size_t offset)
 
 FLASHMEM static int fs_truncate (vfs_file_t *file, size_t length)
 {
-    ram_file_t *rfile = NULL;
+    ram_file_t *rfile;
 
-    if(length == 0 && (rfile = (ram_file_t *)file->handle)) {
-        if(rfile->data) {
-            free((void *)rfile->data);
+    if((rfile = (ram_file_t *)file->handle)) {
+
+        if(length <= rfile->len) {
+            rfile->txbuf.s = rfile->txbuf.data;
+            rfile->txbuf.length = 0;
+        } else if(rfile->txbuf.length)
+            ram_write(rfile, rfile->txbuf.data, rfile->txbuf.length);
+
+        if(length == 0) {
+            if(rfile->data)
+                free((void *)rfile->data);
             rfile->data = rfile->pos = NULL;
             rfile->len = rfile->remaining = 0;
+        } else if(length < rfile->len) {
+            uint8_t *data;
+            if((data = realloc((void *)rfile->data, length))) {
+                rfile->data = data;
+                rfile->data = rfile->pos = data + length;
+                rfile->len = rfile->remaining = length;
+            } else {
+                free((void *)rfile->data);
+                rfile->data = rfile->pos = NULL;
+                rfile->len = rfile->remaining = 0;
+            }
         }
     }
 
@@ -405,7 +424,7 @@ FLASHMEM bool redirect_close (void)
 
 */
 
-FLASHMEM void fs_ram_mount (void)
+FLASHMEM bool fs_ram_mount (void)
 {
     PROGMEM static const vfs_t fs = {
         .fs_name = "RAM",
@@ -428,9 +447,13 @@ FLASHMEM void fs_ram_mount (void)
         .fgetfree = fs_getfree
     };
 
+    bool ok = false;
+
     if(driver_reset == NULL) {
         driver_reset = hal.driver_reset;
         hal.driver_reset = fs_reset;
-        vfs_mount(NULL, "/ram", &fs, (vfs_st_mode_t){ .directory = true, .hidden = true });
+        ok = vfs_mount(NULL, "/ram", &fs, (vfs_st_mode_t){ .directory = true, .hidden = true });
     }
+
+    return ok;
 }

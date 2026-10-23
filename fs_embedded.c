@@ -215,7 +215,7 @@ FLASHMEM static bool fs_getfree (vfs_free_t *free)
     return true;
 }
 
-FLASHMEM void fs_embedded_mount (const embedded_file_t **files)
+FLASHMEM bool fs_embedded_mount (const embedded_file_t **files)
 {
     PROGMEM static const vfs_t fs = {
         .fs_name = "embedded",
@@ -236,6 +236,7 @@ FLASHMEM void fs_embedded_mount (const embedded_file_t **files)
         .fgetfree = fs_getfree
     };
 
+    bool ok = false;
     uint_fast16_t idx = 0;
 
     while(files[idx]) {
@@ -246,8 +247,8 @@ FLASHMEM void fs_embedded_mount (const embedded_file_t **files)
 
     if(embedded.files == NULL) {
 
-        embedded.files = files;
-        vfs_mount(NULL, "/embedded", &fs, (vfs_st_mode_t){ .directory = On, .read_only = On, .hidden = On });
+        if((ok = vfs_mount(NULL, "/embedded", &fs, (vfs_st_mode_t){ .directory = On, .read_only = On, .hidden = On })))
+            embedded.files = files;
 
     } else {
 
@@ -256,12 +257,12 @@ FLASHMEM void fs_embedded_mount (const embedded_file_t **files)
         while(add->next)
             add = add->next;
 
-        if((add->next = malloc(sizeof(struct embedded_files)))) {
+        if((ok = !!(add->next = calloc(1, sizeof(struct embedded_files)))))
             add->next->files = files;
-            add->next->next = NULL;
-        }
     }
 
     if(!all_hidden)
         vfs_mount_set_mode("/embedded", (vfs_st_mode_t){ .directory = On, .read_only = On });
+
+    return ok;
 }

@@ -474,7 +474,7 @@ FLASHMEM int vfs_chdir (const char *path)
     if((mount = get_mount(path))) {
         vfs_stat_t st;
         strcpy(tmp.name, cwd.name);
-        if(mount == cwdmount && !mount->vfs->fchdir && strcmp(path, cwd.name))
+        if(mount->mode.hidden || (mount == cwdmount && !mount->vfs->fchdir && strcmp(path, cwd.name)))
             vfs_errno = EPERM;
         else if(!(mount->vfs->fstat(get_filename(mount, path), &st) == 0 && st.st_mode.directory))
             vfs_errno = ENOTDIR;

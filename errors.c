@@ -101,7 +101,7 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_NotAllowedCriticalEvent, "Not allowed while critical event is active." },
 #if NGC_EXPRESSIONS_ENABLE
     { Status_FlowControlNotExecutingMacro, "Flow statement only allowed in filesystem macro." },
-    { Status_FlowControlSyntaxError, "Unknown flow statement." },
+    { Status_FlowControlSyntaxError, "Unknown or invalid flow statement." },
     { Status_FlowControlStackOverflow, "Stack overflow while executing flow statement." },
     { Status_FlowControlOutOfMemory, "Out of memory while executing flow statement." },
 #endif

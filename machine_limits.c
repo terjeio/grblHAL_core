@@ -783,14 +783,14 @@ static bool check_arc_travel_limits (coord_data_t *target, coord_data_t *positio
 
     memcpy(&corner1, turns > 0 ? position : target, sizeof(coord_data_t));
     corner1.values[plane.axis_0] = x.neg_x ? center.x - radius : min(position->values[plane.axis_0], target->values[plane.axis_0]);
-    corner1.values[plane.axis_1] = x.neg_y ? center.y - radius : max(position->values[plane.axis_1], target->values[plane.axis_1]);
+    corner1.values[plane.axis_1] = x.neg_y ? center.y - radius : min(position->values[plane.axis_1], target->values[plane.axis_1]);
 
     if(!grbl.check_travel_limits(corner1.values, sys.soft_limits, true, envelope))
         return false;
 
     memcpy(&corner2, turns > 0 ? target : position, sizeof(coord_data_t));
     corner2.values[plane.axis_0] = x.pos_x ? center.x + radius : max(position->values[plane.axis_0], target->values[plane.axis_0]);
-    corner2.values[plane.axis_1] = x.pos_y ? center.y + radius : min(position->values[plane.axis_1], target->values[plane.axis_1]);
+    corner2.values[plane.axis_1] = x.pos_y ? center.y + radius : max(position->values[plane.axis_1], target->values[plane.axis_1]);
 
    return grbl.check_travel_limits(corner2.values, sys.soft_limits, true, envelope);
 }

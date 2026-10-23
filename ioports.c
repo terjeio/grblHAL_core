@@ -928,7 +928,7 @@ FLASHMEM static uint8_t add_ports (io_ports_detail_t *ports, uint8_t *map, io_po
 #endif
         if(p_data->ports == NULL)
             p_data->ports = ports;
-        p_data->count = -1;
+        p_data->count = p_data->free = -1;
     } else {
         ports->n_start = 255;
         ports->idx_last = 0;
@@ -1072,19 +1072,22 @@ FLASHMEM bool ioports_add_analog (io_analog_t *analog)
 
         io_ports_list_t *ports;
 
-        if((ports = insert_ports())) {
+        if((ok = (ports = insert_ports()))) {
 
             ports->type = Port_Analog;
             ports->hal.set_pin_description = analog->set_pin_description;
             ports->hal.get_pin_info = analog->get_pin_info;
+
             if(analog->ports->out.n_ports) {
                 ports->hal.analog_out = analog->analog_out;
                 analog->ports->out.pin_base = get_pin_base(Port_Analog, Port_Output);
             }
+
             if(analog->ports->in.n_ports) {
                 ports->hal.wait_on_input = analog->wait_on_input;
                 analog->ports->out.pin_base = get_pin_base(Port_Analog, Port_Input);
             }
+
             ports->ports_id = analog->ports;
         }
     }
@@ -1105,24 +1108,26 @@ FLASHMEM bool ioports_add_digital (io_digital_t *digital)
 
         io_ports_list_t *io_ports;
 
-        if((io_ports = insert_ports())) {
+        if((ok = (io_ports = insert_ports()))) {
 
             io_ports->type = Port_Digital;
             io_ports->hal.set_pin_description = digital->set_pin_description;
             io_ports->hal.get_pin_info = digital->get_pin_info;
+
             if(digital->ports->out.n_ports) {
                 io_ports->hal.digital_out = digital->digital_out;
                 digital->ports->out.pin_base = get_pin_base(Port_Digital, Port_Output);
             }
+
             if(digital->ports->in.n_ports) {
                 io_ports->hal.wait_on_input = digital->wait_on_input;
                 io_ports->hal.register_interrupt_handler = digital->register_interrupt_handler;
                 digital->ports->in.pin_base = get_pin_base(Port_Digital, Port_Input);
             }
-            io_ports->ports_id = digital->ports;
-        }
 
-        ioports_add_settings(NULL, NULL);
+            io_ports->ports_id = digital->ports;
+            ioports_add_settings(NULL, NULL);
+        }
     }
 
     return ok;
@@ -1146,6 +1151,9 @@ __STATIC_FORCEINLINE uint_fast16_t invert_pwm (ioports_pwm_t *pwm_data, uint_fas
 */
 FLASHMEM bool ioports_precompute_pwm_values (pwm_config_t *config, ioports_pwm_t *pwm_data, uint32_t clock_hz)
 {
+    if(config->freq_hz > (float)(clock_hz / 100) || (uint32_t)((float)clock_hz / config->freq_hz) > UINT16_MAX)
+        return false;
+
     pwm_data->f_clock = clock_hz;
 
     if(config->max > config->min) {

@@ -23,4 +23,4 @@
 
 #include "vfs.h"
 
-void fs_embedded_mount (const embedded_file_t **files);
+bool fs_embedded_mount (const embedded_file_t **files);

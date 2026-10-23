@@ -602,9 +602,7 @@ FLASHMEM bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
 
         gc_state.feed_rate = snapshot->modal.feed_rate;
         sys.override.control = snapshot->modal.override_ctrl;
-
-        if(actions->command.M9)
-            plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
+        plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
 
         if(actions->command.M8)
             coolant_restore(gc_state.modal.coolant, settings.coolant.on_delay);
@@ -1151,7 +1149,6 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
                     if(*comment && (message == NULL || *message == NULL) && grbl.on_gcode_comment) {
                         if((*status = grbl.on_gcode_comment(comment)) != Status_OK) {
                             *block = '\0';
-                            *message = NULL;
                             return block;
                         }
                     }
@@ -1170,6 +1167,19 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
     *s2 = '\0';
 
     return block;
+}
+
+FLASHMEM void gc_filestream_changed (vfs_file_t *file)
+{
+    static vfs_file_t *prev;
+
+    if(!prev)
+        gc_state.file = NULL;
+
+    if(file == NULL)
+        gc_state.flags.file_stream = false;
+
+    prev = file;
 }
 
 inline static int32_t cv (int32_t int_value, uint_fast16_t mantissa)
@@ -4404,8 +4414,9 @@ status_code_t gc_execute_block (char *block)
                 if(actions->command.M9) {
                     actions->command.M9 = Off;
                     gc_state.modal.override_ctrl = gc_block.modal.override_ctrl;
-                    plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
                 }
+
+                plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
 
                 if(actions->command.M8) {
                     actions->command.M8 = Off;
@@ -5062,7 +5073,7 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.cutter_comp.side = CComp_Off;
             cc_enable(&gc_state.modal.cutter_comp, plane, (coord_data_t *)gc_state.position);
 #endif
-            if(gc_state.modal.g5x_offset.id != CoordinateSystem_G54) {
+            if(gc_state.modal.g5x_offset.id != CoordinateSystem_G54 && !settings.flags.no_restore_coord_sys) {
                 gc_state.modal.g5x_offset.id = CoordinateSystem_G54;
                 report_add_realtime(Report_GWCO);
             }

@@ -1161,9 +1161,10 @@ static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_valu
     return Status_OK;
 }
 
-static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value)
+static status_code_t set_m2_m30_action (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.flags.restore_overrides = int_value != 0;
+    settings.flags.restore_overrides = int_value & 0b01;
+    settings.flags.no_restore_coord_sys = !(int_value & 0b10);
 
     return Status_OK;
 }
@@ -1790,8 +1791,9 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             value = settings.parking.flags.value;
             break;
 
-        case Setting_RestoreOverrides:
-            value = settings.flags.restore_overrides;
+        case Setting_EndProgramActions:
+            value = settings.flags.restore_overrides |
+                     (settings.flags.no_restore_coord_sys ? 0b00 : 0b10);
             break;
 
         case Setting_SleepEnable:
@@ -2426,7 +2428,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ParkingPulloutRate, Group_SafetyDoor, "Parking pull-out rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_rate, NULL, NULL },
      { Setting_ParkingTarget, Group_SafetyDoor, "Parking target", "mm", Format_Decimal, "-###0.0", "-100000", NULL, Setting_IsExtended, &settings.parking.target, NULL, NULL },
      { Setting_ParkingFastRate, Group_SafetyDoor, "Parking fast rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.rate, NULL, NULL },
-     { Setting_RestoreOverrides, Group_General, "Restore overrides", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_restore_overrides, get_int, NULL },
+     { Setting_EndProgramActions, Group_General, "End program (M2, M30) actions", NULL, Format_Bitfield, "Restore overrides,Restore G54", NULL, NULL, Setting_IsExtendedFn, set_m2_m30_action, get_int, NULL },
      { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, door_options, NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume,Set RPM to minimum (except for laser M4)", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
@@ -2614,7 +2616,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ParkingPulloutRate, "Spindle pull-out/plunge slow feed rate in mm/min." },
     { Setting_ParkingTarget, "Parking axis target. In mm, as machine coordinate [-max_travel, 0]." },
     { Setting_ParkingFastRate, "Parking fast rate to target after pull-out in mm/min." },
-    { Setting_RestoreOverrides, "Restore overrides to default values at program end." },
+    { Setting_EndProgramActions, "Controls restore overrides and coordinate system to default values at program end." },
     { Setting_DoorOptions, "Ignore when idle: disregard door signal in IDLE state to allow jogging etc. Available when controller has door input.\n"
                            "Keep coolant state on open: do not turn off coolant if on." },
     { Setting_SleepEnable, "Enable sleep mode." },

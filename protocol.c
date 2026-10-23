@@ -220,8 +220,11 @@ bool protocol_main_loop (void)
                     system_set_exec_state_flag(EXEC_MOTION_CANCEL);
 
             } else if(c == ASCII_EOF) {
-                if(grbl.on_file_end)
-                    grbl.on_file_end(hal.stream.file, gc_state.last_error);
+                if(grbl.on_file_end) {
+                    status_code_t status;
+                    if((status = grbl.on_file_end(hal.stream.file, gc_state.last_error)) != gc_state.last_error)
+                        grbl.report.status_message((gc_state.last_error = (status == Status_Handled ? Status_OK : status)));
+                }
             } else if(c == ASCII_LF || c == ASCII_CR) { // End of line reached
 
                 // Check for possible secondary end of line character, do not process as empty line

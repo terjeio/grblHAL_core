@@ -65,6 +65,7 @@ static int32_t stream_read_file (void)
             line.eol_ok = false;
             return ASCII_EOF;   // Return end-of-file. grbl.on_file_end() event generated in protocol.c.
         } else {
+            line.number++;
             line.eol_ok = true;
             return ASCII_LF;    // Return a linefeed if the last character was not a linefeed.
         }
@@ -95,7 +96,7 @@ FLASHMEM static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
         while(stream->next && (stream = stream->next));
 
         if(stream->eof_handler)
-            stream->eof_handler(file, status);
+            status = stream->eof_handler(file, status);
     }
 
     if(on_file_end)

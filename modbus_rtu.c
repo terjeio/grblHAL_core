@@ -330,7 +330,8 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
         if(head->next != tail) {
             add_message((queue_entry_t *)head, msg, true, callbacks);
             head = head->next;
-        }
+        } else
+            return false;
     }
 
     return !block;
