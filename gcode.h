@@ -308,6 +308,7 @@ typedef enum {
 //! Data for M62, M63 and M67 commands when executed synchronized with motion.
 typedef struct output_command {
     bool is_digital;
+    bool is_assigned;
     uint8_t port;
     float value;
     struct output_command *next;

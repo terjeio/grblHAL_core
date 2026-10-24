@@ -249,17 +249,16 @@ FLASHMEM static int fs_truncate (vfs_file_t *file, size_t length)
         if(length == 0) {
             if(rfile->data)
                 free((void *)rfile->data);
-            rfile->data = rfile->pos = NULL;
+            rfile->pos = rfile->data = NULL;
             rfile->len = rfile->remaining = 0;
         } else if(length < rfile->len) {
             uint8_t *data;
             if((data = realloc((void *)rfile->data, length))) {
-                rfile->data = data;
-                rfile->data = rfile->pos = data + length;
+                rfile->pos = (rfile->data = data) + length;
                 rfile->len = rfile->remaining = length;
             } else {
                 free((void *)rfile->data);
-                rfile->data = rfile->pos = NULL;
+                rfile->pos = rfile->data = NULL;
                 rfile->len = rfile->remaining = 0;
             }
         }

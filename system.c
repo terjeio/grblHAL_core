@@ -826,7 +826,8 @@ FLASHMEM static status_code_t rtc_action (sys_state_t state, char *args)
                 retval = Status_BadNumberFormat;
             else if(!hal.rtc.set_datetime(time))
                 retval = Status_InvalidStatement;
-        }
+        } else
+            retval = Status_InvalidStatement;
     }
 
     return retval;

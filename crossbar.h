@@ -40,6 +40,8 @@
 #define N_AUX_DOUT 24
 #endif
 
+#define MOTOR_UNDEFINED 512
+
 typedef enum {
 // NOTE: the sequence of the following enums MUST match the control_signals_t layout
     Input_Reset = 0,
@@ -61,12 +63,24 @@ typedef enum {
     Input_MotorFaultX,
     Input_MotorFaultY,
     Input_MotorFaultZ,
+#ifdef A_AXIS
     Input_MotorFaultA,
+#endif
+#ifdef B_AXIS
     Input_MotorFaultB,
+#endif
+#ifdef C_AXIS
     Input_MotorFaultC,
+#endif
+#ifdef U_AXIS
     Input_MotorFaultU,
+#endif
+#ifdef V_AXIS
     Input_MotorFaultV,
+#endif
+#ifdef W_AXIS
     Input_MotorFaultW,
+#endif
     Input_MotorFaultX2,
     Input_MotorFaultY2,
     Input_MotorFaultZ2,
@@ -93,24 +107,36 @@ typedef enum {
     Input_LimitZ_Max,
     Input_HomeZ,
     Input_HomeZ_2,
+#ifdef A_AXIS
     Input_LimitA,
     Input_LimitA_Max,
     Input_HomeA,
+#endif
+#ifdef B_AXIS
     Input_LimitB,
     Input_LimitB_Max,
     Input_HomeB,
+#endif
+#ifdef C_AXIS
     Input_LimitC,
     Input_LimitC_Max,
     Input_HomeC,
+#endif
+#ifdef U_AXIS
     Input_LimitU,
     Input_LimitU_Max,
     Input_HomeU,
+#endif
+#ifdef V_AXIS
     Input_LimitV,
     Input_LimitV_Max,
     Input_HomeV,
+#endif
+#ifdef W_AXIS
     Input_LimitW,
     Input_LimitW_Max,
     Input_HomeW,
+#endif
     Input_SpindleIndex,
     Input_SpindlePulse,
     Input_Aux0,
@@ -186,12 +212,24 @@ typedef enum {
     Output_StepZ,
     Output_StepZ2,
     Output_StepZ_2 = Output_StepZ2, // deprecated
+#ifdef A_AXIS
     Output_StepA,
+#endif
+#ifdef B_AXIS
     Output_StepB,
+#endif
+#ifdef C_AXIS
     Output_StepC,
+#endif
+#ifdef U_AXIS
     Output_StepU,
+#endif
+#ifdef V_AXIS
     Output_StepV,
+#endif
+#ifdef W_AXIS
     Output_StepW,
+#endif
     Output_DirX,
     Output_DirX2,
     Output_DirX_2 = Output_DirX2, // deprecated
@@ -201,12 +239,24 @@ typedef enum {
     Output_DirZ,
     Output_DirZ2,
     Output_DirZ_2 = Output_DirZ2, // deprecated
+#ifdef A_AXIS
     Output_DirA,
+#endif
+#ifdef B_AXIS
     Output_DirB,
+#endif
+#ifdef C_AXIS
     Output_DirC,
+#endif
+#ifdef U_AXIS
     Output_DirU,
+#endif
+#ifdef V_AXIS
     Output_DirV,
+#endif
+#ifdef W_AXIS
     Output_DirW,
+#endif
     Output_MotorChipSelect,
     Output_MotorChipSelectX,
     Output_MotorChipSelectY,
@@ -225,12 +275,24 @@ typedef enum {
     Output_StepperEnableY2 = Output_StepperEnableY,
     Output_StepperEnableZ,
     Output_StepperEnableZ2 = Output_StepperEnableZ,
+#ifdef A_AXIS
     Output_StepperEnableA,
+#endif
+#ifdef B_AXIS
     Output_StepperEnableB,
+#endif
+#ifdef C_AXIS
     Output_StepperEnableC,
+#endif
+#ifdef U_AXIS
     Output_StepperEnableU,
+#endif
+#ifdef V_AXIS
     Output_StepperEnableV,
+#endif
+#ifdef W_AXIS
     Output_StepperEnableW,
+#endif
     Output_StepperEnableXY,
     Output_StepperEnableAB,
     Output_SpindleOn,
@@ -933,7 +995,7 @@ typedef union {
 
 static inline uint8_t xbar_fault_pin_to_axis (pin_function_t fn)
 {
-    return fn >= Input_MotorFaultX && fn <= Input_MotorFaultV ? fn - Input_MotorFaultX : (fn >= Input_MotorFaultX2 && fn <= Input_MotorFaultZ2 ? fn - Input_MotorFaultX2 : 0);
+    return fn >= Input_MotorFaultX && fn < Input_MotorFaultX + N_AXIS ? fn - Input_MotorFaultX : (fn >= Input_MotorFaultX2 && fn <= Input_MotorFaultZ2 ? fn - Input_MotorFaultX2 : 0);
 }
 
 static inline stepper_state_t xbar_stepper_state_set (stepper_state_t *state, uint8_t axis, bool b)

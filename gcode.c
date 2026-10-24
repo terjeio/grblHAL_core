@@ -1006,7 +1006,7 @@ FLASHMEM static bool add_output_command (output_command_t *command)
 {
     output_command_t *add_cmd;
 
-    if((add_cmd = malloc(sizeof(output_command_t)))) {
+    if((add_cmd = calloc(1, sizeof(output_command_t)))) {
 
         memcpy(add_cmd, command, sizeof(output_command_t));
 
@@ -2576,6 +2576,9 @@ status_code_t gc_execute_block (char *block)
                 gc_block.output_command.is_digital = true;
                 gc_block.output_command.port = (uint8_t)gc_block.values.p;
                 gc_block.output_command.value = port_command == 62 || port_command == 64 ? 1.0f : 0.0f;
+                if((port_command == IoMCode_OutputOnSynced || port_command == IoMCode_OutputOffSynced) && !add_output_command(&gc_block.output_command))
+                    RETURN(Status_FlowControlOutOfMemory);
+
                 gc_block.words.p = Off;
                 break;
 
@@ -2640,6 +2643,8 @@ status_code_t gc_execute_block (char *block)
                     gc_block.output_command.port = (uint8_t)gc_block.values.e;
                     gc_block.output_command.value = gc_block.values.q;
                     gc_block.words.e = gc_block.words.q = Off;
+                    if(port_command == IoMCode_AnalogOutSynced && !add_output_command(&gc_block.output_command))
+                        RETURN(Status_FlowControlOutOfMemory);
                 }
                 break;
         }
@@ -2698,7 +2703,7 @@ status_code_t gc_execute_block (char *block)
                 if(spindle_id == - 1) {
                     gc_block.values.$ = N_SYS_SPINDLE;
                     do {
-                        bit_true(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(--gc_block.values.$));
+                        bit_false(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(--gc_block.values.$));
                     } while(gc_block.values.$);
                 } else
 #endif
@@ -4233,11 +4238,6 @@ status_code_t gc_execute_block (char *block)
 
         switch(port_command) {
 
-            case IoMCode_OutputOnSynced:
-            case IoMCode_OutputOffSynced:
-                add_output_command(&gc_block.output_command);
-                break;
-
             case IoMCode_OutputOnImmediate:
             case IoMCode_OutputOffImmediate:
                 ioport_digital_out(gc_block.output_command.port, gc_block.output_command.value != 0.0f);
@@ -4248,13 +4248,11 @@ status_code_t gc_execute_block (char *block)
                 report_add_realtime(Report_M66Result);
                 break;
 
-            case IoMCode_AnalogOutSynced:
-                add_output_command(&gc_block.output_command);
-                break;
-
             case IoMCode_AnalogOutImmediate:
                 ioport_analog_out(gc_block.output_command.port, gc_block.output_command.value);
                 break;
+
+            default: break; // Command is queued at validation
         }
     }
 
@@ -4858,7 +4856,7 @@ status_code_t gc_execute_block (char *block)
                   //  if(status != Status_GcodeUnsupportedCommand)
                         mc_override_ctrl_update(overrides);  // Wait until synchronized move is finished, then restore previous override disable status.
 
-                    if(status != Status_GcodeUnsupportedCommand) {
+                    if(status == Status_Unhandled) {
 
                         if(!ngc_call_push(&gc_state + ngc_call_level()))
                             RETURN(Status_FlowControlStackOverflow); // [Call level too deep]

@@ -711,7 +711,7 @@ FLASHMEM static void spindle_ramp (spindle_ptrs_t *spindle, spindle_state_t stat
 
     if(delay_ms > DWELL_TIME_STEP && (ramp = _get_ramp(spindle))) {
 
-        task_delete(spindle_ramp_task, NULL);
+        task_delete(spindle_ramp_task, ramp);
 
         if(spindle_get_ramp(spindle, rpm, target_rpm, delay_ms, ramp) > DWELL_TIME_STEP) {
 
@@ -885,7 +885,7 @@ FLASHMEM bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, f
     bool ok;
 
     if(!spindle->param->option.restore_rpm && spindle->cap.laser) { // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
-        if(!(ok = !settings.flags.disable_laser_during_hold))
+        if(!(ok = !settings.flags.disable_laser_during_hold && state.on && spindle_check_state(spindle, state)))
             ok = (sys.step_control.update_spindle_rpm = _spindle_set_state(spindle, state, 0.0f, 0));
     } else if(!(ok = !(spindle->param->option.restore_rpm || spindle->param->option.override_pending) && spindle_check_state(spindle, state) && spindle->param->rpm == rpm)) {
         ok = spindle_set_state_wait(spindle, state, rpm, delay_ms);

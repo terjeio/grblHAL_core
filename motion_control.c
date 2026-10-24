@@ -792,7 +792,7 @@ FLASHMEM __attribute__((weak)) status_code_t mc_lathe_cycle (plan_line_data_t *p
 
 FLASHMEM __attribute__((weak))  status_code_t mc_rigid_tapping (plan_line_data_t *pl_data, coord_data_t *target, coord_data_t *position, float pitch, float rpm_multiplier)
 {
-    return Status_GcodeUnsupportedCommand; // TBC
+    return Status_Unhandled; // TBC
 }
 
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.

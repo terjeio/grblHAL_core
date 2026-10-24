@@ -247,8 +247,9 @@ FLASHMEM bool fs_embedded_mount (const embedded_file_t **files)
 
     if(embedded.files == NULL) {
 
-        if((ok = vfs_mount(NULL, "/embedded", &fs, (vfs_st_mode_t){ .directory = On, .read_only = On, .hidden = On })))
-            embedded.files = files;
+        embedded.files = files;
+        if(!(ok = vfs_mount(NULL, "/embedded", &fs, (vfs_st_mode_t){ .directory = On, .read_only = On, .hidden = On })))
+            embedded.files = NULL;
 
     } else {
 

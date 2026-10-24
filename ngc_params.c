@@ -174,7 +174,7 @@ static ngc_virtual_param_t _rvs = { .name = "_value_returned", .get = _get_value
 
 FLASHMEM static float _convert_pos (float value, uint_fast8_t axis)
 {
-    return gc_state.modal.units_imperial && bit_isfalse(settings.steppers.is_rotary.mask, bit(axis)) ? value * INCH_PER_MM : value;
+    return axis <= 9 && gc_state.modal.units_imperial && bit_isfalse(settings.steppers.is_rotary.mask, bit(axis)) ? value * INCH_PER_MM : value;
 }
 
 #else

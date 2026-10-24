@@ -700,7 +700,7 @@ FLASHMEM static xbar_t *io_get_pin_info (io_port_type_t type, io_port_direction_
             if((pin = io_port->hal.get_pin_info(dir, port - io_port->ports_id->cfg[dir].n_start))) {
                 pin->ports_id = io_port->ports_id;
                 pin->cap.claimable = is_aux(cfg, pin->function);
-                pin->mode.claimed = cfg->claimed.mask & (1UL << (pin->id + io_port->ports_id->cfg[dir].n_start));
+                pin->mode.claimed = !!(cfg->claimed.mask & (1UL << (pin->id + io_port->ports_id->cfg[dir].n_start)));
             }
         }
     } while(pin == NULL && (io_port = io_port->next));
@@ -991,7 +991,7 @@ FLASHMEM static bool _ioports_add (io_ports_data_t *ports, io_port_type_t type, 
                 idx_in++;
 
                 if(i < MAX_PORTS) {
-                    cfg_in->bus.mask |= (1 << i);
+                    cfg_in->bus.mask |= (1UL << i);
                     strcat(cfg_in->port_names, i == 0 ? "Aux " : ",Aux ");
                     strcat(cfg_in->port_names, uitoa(i));
                 }
@@ -1004,7 +1004,7 @@ FLASHMEM static bool _ioports_add (io_ports_data_t *ports, io_port_type_t type, 
                     set_description(type, Port_Output, i - ports->out.n_start, pnum_to_string(idx_out, cfg_out->pnum));
 
                 if(i < MAX_PORTS) {
-                    cfg_out->bus.mask |= (1 << i);
+                    cfg_out->bus.mask |= (1UL << i);
                     strcat(cfg_out->port_names, i == 0 ? "Aux " : ",Aux ");
                     strcat(cfg_out->port_names, uitoa(i));
                 }

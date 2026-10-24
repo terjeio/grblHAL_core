@@ -902,7 +902,7 @@ FLASHMEM bool vfs_mount_set_mode (const char *path, vfs_st_mode_t mode)
 FLASHMEM const char *vfs_locate_file (const char *filename)
 {
     static char _name[32];
-    static string_t pathb = { .name = _name, .len = sizeof(_name) - 1 }, path = { .base = &pathb };
+    static string_t pathb = { .name = _name, .len = sizeof(_name) - 1 }, path = { .name = _name, .len = sizeof(_name) - 1, .base = &pathb };
 
     vfs_stat_t st;
 
@@ -930,5 +930,5 @@ FLASHMEM const char *vfs_locate_file (const char *filename)
         }
     }
 
-    return *path.name ? (const char *)path.name : NULL;
+    return path.name && *path.name ? (const char *)path.name : NULL;
 }

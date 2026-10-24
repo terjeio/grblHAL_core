@@ -813,7 +813,7 @@ FLASHMEM bool stream_mpg_set_baud (uint8_t baud)
 FLASHMEM bool stream_mpg_enable (bool on)
 {
     static io_stream_t org_stream = {
-        .type = StreamType_Null
+        .type = StreamType_Undefined
     };
 
     if(mpg.stream.read == NULL)
@@ -826,7 +826,7 @@ FLASHMEM bool stream_mpg_enable (bool on)
     }
 
     if(on) {
-        if(org_stream.type == StreamType_Null) {
+        if(org_stream.type == StreamType_Undefined) {
             memcpy(&org_stream, &hal.stream, sizeof(io_stream_t));
             if(hal.stream.disable_rx)
                 hal.stream.disable_rx(true);
@@ -844,9 +844,9 @@ FLASHMEM bool stream_mpg_enable (bool on)
             hal.stream.cancel_read_buffer = mpg.stream.cancel_read_buffer;
             hal.stream.reset_read_buffer = mpg.stream.reset_read_buffer;
         }
-    } else if(org_stream.type != StreamType_Null) {
+    } else if(org_stream.type != StreamType_Undefined) {
         memcpy(&hal.stream, &org_stream, offsetof(io_stream_t, report));
-        org_stream.type = StreamType_Null;
+        org_stream.type = StreamType_Undefined;
         mpg.stream.report.override_counter = mpg.stream.report.wco_counter = 0;
         if(hal.stream.disable_rx)
             hal.stream.disable_rx(false);

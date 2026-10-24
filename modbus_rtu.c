@@ -129,6 +129,7 @@ static void tx_message (volatile queue_entry_t *msg)
 
     packet = msg;
     state = ModBus_TX;
+    exception_code = ModBus_NoException;
     rx_timeout = modbus.rx_timeout;
 
     stream.flush_rx_buffer();
@@ -216,7 +217,7 @@ static void modbus_poll (void *data)
                         stats.crc_errors++;
                         if((state = packet->async ? ModBus_Silent : ModBus_Exception) == ModBus_Silent) {
                             if(packet->callbacks.on_rx_exception)
-                                packet->callbacks.on_rx_exception(ModBus_CRCError, packet->msg.context);
+                                packet->callbacks.on_rx_exception((exception_code = ModBus_CRCError), packet->msg.context);
                             packet = NULL;
                         }
                         silence_until = hal.get_elapsed_ticks() + silence_timeout;
@@ -256,7 +257,7 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
 
     if(msg->tx_length > MODBUS_MAX_ADU_SIZE || msg->rx_length > MODBUS_MAX_ADU_SIZE) {
         if(callbacks->on_rx_exception)
-            callbacks->on_rx_exception(ModBus_IllegalSize, msg->context);
+            callbacks->on_rx_exception((exception_code = ModBus_IllegalSize), msg->context);
         return false;
     }
 

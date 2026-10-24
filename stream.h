@@ -85,7 +85,8 @@ typedef enum {
     StreamType_Bluetooth,
     StreamType_Telnet,
     StreamType_WebSocket,
-    StreamType_Null
+    StreamType_Null,
+    StreamType_Undefined // for internal use only
 } stream_type_t;
 
 typedef enum {
