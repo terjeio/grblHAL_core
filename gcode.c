@@ -483,7 +483,7 @@ FLASHMEM static parameter_words_t macro_arguments_push (gc_values_t *values, par
 
     while(words.mask) {
         if((words.mask & 1) && offset[idx]) {
-            g65_words.value |= (1 << idx);
+            g65_words.value |= (1UL << idx);
             if(target)
                 *(float *)((uint8_t *)target + offset[idx]) = *(float *)((uint8_t *)values + offset[idx]);
             else

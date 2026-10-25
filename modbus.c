@@ -214,7 +214,7 @@ FLASHMEM static void rx_timeout (uint8_t code, void *context)
 
 FLASHMEM static void rx_packet (modbus_message_t *msg)
 {
-    if(!(msg->adu[0] & 0x80)) {
+    if(!(msg->adu[1] & 0x80)) {
 
         uint_fast8_t idx;
 

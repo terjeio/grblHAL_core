@@ -175,7 +175,7 @@ static void modbus_poll (void *data)
 
         case ModBus_AwaitReply:
             if(rx_timeout && --rx_timeout == 0) {
-
+                int32_t code;
                 stats.timeouts++;
 
                 if(packet->async) {
@@ -183,8 +183,9 @@ static void modbus_poll (void *data)
                     if(packet->callbacks.on_rx_timeout)
                         packet->callbacks.on_rx_timeout(0, packet->msg.context);
                     packet = NULL;
-                } else if(stream.read() == packet->msg.adu[0] && (stream.read() & 0x80)) {
-                    int32_t code = stream.read();
+                } else if(stream.read() == packet->msg.adu[0] && ((code = stream.read()) & 0x80)) {
+                    if(code != SERIAL_NO_DATA)
+                        code = stream.read();
                     exception_code = code == SERIAL_NO_DATA ? ModBus_UnknownException : (modbus_exception_t)(code & 0xFF);
                     state = ModBus_Exception;
                     stats.rx_exceptions++;
@@ -333,7 +334,8 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
             head = head->next;
         } else
             return false;
-    }
+    } else
+        return false;
 
     return !block;
 }

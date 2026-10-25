@@ -266,10 +266,10 @@ FLASHMEM static const char *parse_path (const char *path)
 
 FLASHMEM static vfs_mount_t *get_mount (const char *path)
 {
-    vfs_errno = 0;
-
     if(path == NULL)
         return NULL;
+
+    vfs_errno = 0;
 
     if(*path != '/')
         return cwdmount;
@@ -893,7 +893,7 @@ FLASHMEM bool vfs_mount_set_mode (const char *path, vfs_st_mode_t mode)
 {
     vfs_mount_t *mount;
     
-    if((mount = get_mount(path)))
+    if((mount = get_mount(path)) && !strncmp(path, mount->path, strlen(mount->path) - 1))
         mount->mode = mode;
 
     return !!mount;

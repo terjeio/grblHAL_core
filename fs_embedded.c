@@ -262,7 +262,7 @@ FLASHMEM bool fs_embedded_mount (const embedded_file_t **files)
             add->next->files = files;
     }
 
-    if(!all_hidden)
+    if(embedded.files && !all_hidden)
         vfs_mount_set_mode("/embedded", (vfs_st_mode_t){ .directory = On, .read_only = On });
 
     return ok;

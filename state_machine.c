@@ -416,7 +416,8 @@ FLASHMEM void state_suspend_manager (void)
  */
 static void state_noop (uint_fast16_t rt_exec)
 {
-    // Do nothing - state change requests are handled elsewhere or ignored.
+    if((rt_exec & EXEC_SLEEP) && sys_state == STATE_ALARM)
+        state_set(STATE_SLEEP);
 }
 
 /*! /brief Waits for idle actions and executes them by switching to the appropriate sys_state.

@@ -756,7 +756,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                             param_id++;
                         }
 
-                        if(status == Status_OK && param_id < 30) do {
+                        if(status == Status_OK && param_id <= 30) do {
                             ngc_param_get(param_id, &params[param_id - 1]);
                         } while(++param_id <= 30);
 
