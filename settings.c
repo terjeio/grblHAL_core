@@ -2428,7 +2428,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ParkingPulloutRate, Group_SafetyDoor, "Parking pull-out rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_rate, NULL, NULL },
      { Setting_ParkingTarget, Group_SafetyDoor, "Parking target", "mm", Format_Decimal, "-###0.0", "-100000", NULL, Setting_IsExtended, &settings.parking.target, NULL, NULL },
      { Setting_ParkingFastRate, Group_SafetyDoor, "Parking fast rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.rate, NULL, NULL },
-     { Setting_EndProgramActions, Group_General, "End program (M2, M30) actions", NULL, Format_Bitfield, "Restore overrides,Restore G54", NULL, NULL, Setting_IsExtendedFn, set_m2_m30_action, get_int, NULL },
+     { Setting_EndProgramActions, Group_General, "End program actions", NULL, Format_Bitfield, "Restore overrides,Restore G54", NULL, NULL, Setting_IsExtendedFn, set_m2_m30_action, get_int, NULL },
      { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, door_options, NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume,Set RPM to minimum (except for laser M4)", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
@@ -2514,7 +2514,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #if N_AXIS > 3
      { Setting_RotaryOptions, Group_General, "Rotary options", NULL, Format_XBitfield, "Fix feedrate,Revert metric conversion", NULL, NULL, Setting_IsExpandedFn, set_rotary_options, get_int, NULL },
 #endif
-     { Setting_MPGAutoReportInterval, Group_MPG, "MPG autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_mpg_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
+     { Setting_MPGAutoReportInterval, Group_MPG, "MPG autoreport interval", "ms", Format_Int16, "###0", "25", "1000", Setting_IsExtendedFn, set_mpg_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
      { Settings_MPG_BaudRate, Group_MPG, "MPG baud rate", NULL, Format_RadioButtons, "38400,115200,230400,460800,576000,921600", NULL, NULL, Setting_NonCoreFn, mpg_set_baud, get_int, is_setting_available },
 };
 
@@ -2616,7 +2616,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ParkingPulloutRate, "Spindle pull-out/plunge slow feed rate in mm/min." },
     { Setting_ParkingTarget, "Parking axis target. In mm, as machine coordinate [-max_travel, 0]." },
     { Setting_ParkingFastRate, "Parking fast rate to target after pull-out in mm/min." },
-    { Setting_EndProgramActions, "Controls restore overrides and coordinate system to default values at program end." },
+    { Setting_EndProgramActions, "Controls restore overrides and coordinate system to default values at program end (M2, M30)." },
     { Setting_DoorOptions, "Ignore when idle: disregard door signal in IDLE state to allow jogging etc. Available when controller has door input.\n"
                            "Keep coolant state on open: do not turn off coolant if on." },
     { Setting_SleepEnable, "Enable sleep mode." },

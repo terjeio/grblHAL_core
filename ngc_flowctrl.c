@@ -822,9 +822,10 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
    //     char buf[200];
    //     sprintf(buf, "%d %d %d %s", *skip, stack_idx, stack[stack_idx].operation, line);
    //     report_message(buf, Message_Plain);
-    } else if(!ns_running()) {
-        ngc_flowctrl_init();
+    } else {
         *skip = false;
+        if(!ns_running())
+            ngc_flowctrl_init();
         if(settings.flags.ngc_debug_out)
             report_message(line, Message_Plain);
     }
